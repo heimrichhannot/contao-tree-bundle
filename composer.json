@@ -1,0 +1,23 @@
+{
+  "name": "heimrichhannot/contao-tree-bundle",
+  "description": "A contao bundle to create a tree structure like an organization chart in the contao backend and output it in the frontend.",
+  "license": "proprietary",
+  "authors": [
+    {
+      "name": "Heimrich & Hannot GmbH",
+      "email": "digitales@heimrich-hannot.de"
+    }
+  ],
+  "require": {
+    "php": "^7.1",
+    "contao/core-bundle": "^4.4"
+  },
+  "autoload": {
+    "psr-4": {
+      "HeimrichHannot\\TreeBundle\\": "src/"
+    }
+  },
+  "extra": {
+    "contao-manager-plugin": "HeimrichHannot\\TreeBundle\\ContaoManager\\Plugin"
+  }
+}

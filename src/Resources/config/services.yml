@@ -1,0 +1,18 @@
+services:
+  _defaults:
+    autowire: true
+
+  _instanceof:
+    HeimrichHannot\TreeBundle\TreeNode\TreeNodeInterface:
+      tags: ['huh.tree.node_type']
+
+  HeimrichHannot\TreeBundle\EventListener\DataContainer\:
+    resource: '../../EventListener/DataContainer/*'
+    public: true
+
+  HeimrichHannot\TreeBundle\TreeNode\:
+    resource: '../../TreeNode/*'
+    tags: ['huh.tree.node_type']
+
+  HeimrichHannot\TreeBundle\Collection\NodeTypeCollection:
+    arguments: [!tagged huh.tree.node_type]
