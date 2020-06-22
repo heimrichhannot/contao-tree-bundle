@@ -6,8 +6,8 @@ services:
     HeimrichHannot\TreeBundle\TreeNode\TreeNodeInterface:
       tags: ['huh.tree.node_type']
 
-  HeimrichHannot\TreeBundle\EventListener\DataContainer\:
-    resource: '../../EventListener/DataContainer/*'
+  HeimrichHannot\TreeBundle\EventListener\:
+    resource: '../../EventListener/*'
     public: true
 
   HeimrichHannot\TreeBundle\TreeNode\:
