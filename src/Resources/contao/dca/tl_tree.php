@@ -5,12 +5,11 @@ $GLOBALS['TL_DCA']['tl_tree'] = array
 	// Config
 	'config' => array
 	(
-        'label'                       => '<b>'.$GLOBALS['TL_LANG']['DCA']['tl_tree']['TYPES']['mainroot'].'</b> '.Config::get('websiteTitle'),
+        'label'                       => '<b>'.$GLOBALS['TL_LANG']['tl_tree']['TYPES']['mainroot'].'</b> '.Config::get('websiteTitle'),
 		'dataContainer'               => 'Table',
 		'enableVersioning'            => true,
 		'onload_callback' => array
 		(
-//			array('tl_page', 'checkPermission'),
 //			array('tl_page', 'addBreadcrumb'),
 			array(\HeimrichHannot\TreeBundle\EventListener\DataContainer\TreeContainer::class, 'onLoadCallback'),
 //			array('tl_page', 'makeRedirectPageMandatory'),
@@ -44,19 +43,20 @@ $GLOBALS['TL_DCA']['tl_tree'] = array
 	// List
 	'list' => array
 	(
-		'sorting' => array
-		(
-			'mode'                    => 5,
-			'icon'                    => 'pagemounts.svg',
+        'sorting' => array
+        (
+            'mode'               => 5,
+            'icon'               => 'pagemounts.svg',
 //			'paste_button_callback'   => array('tl_page', 'pastePage'),
-			'panelLayout'             => 'filter;search'
-		),
-		'label' => array
-		(
-			'fields'                  => array('title'),
-			'format'                  => '%s',
-			'label_callback'          => array(\HeimrichHannot\TreeBundle\EventListener\DataContainer\TreeContainer::class, 'onLabelCallback')
-		),
+            'panelLayout'        => 'filter;search',
+            'child_record_class' => 'tl_tree',
+        ),
+        'label' => array
+        (
+            'fields'         => array('title'),
+            'format'         => '%s',
+            'label_callback' => array(\HeimrichHannot\TreeBundle\EventListener\DataContainer\TreeContainer::class, 'onLabelCallback'),
+        ),
 		'global_operations' => array
 		(
 			'toggleNodes' => array
@@ -143,30 +143,13 @@ $GLOBALS['TL_DCA']['tl_tree'] = array
 	// Palettes
 	'palettes' => array
 	(
-		'__selector__'                => array('type', 'autoforward', 'protected', 'createSitemap', 'includeLayout', 'includeCache', 'includeChmod'),
+		'__selector__'                => array('type'),
 		'default'                     => '{title_legend},title,alias,type;{content_legend},description;',
-		'root'                     => '{title_legend},title,alias,type;{content_legend},description;',
-		'person'                     => '{title_legend},title,alias,type;{content_legend},description;',
-		'department'                     => '{title_legend},title,alias,type;{content_legend},description;',
-
-//        'root'                        => '{title_legend},title,alias,type;{meta_legend},pageTitle;{dns_legend},language;{global_legend:hide},dateFormat,timeFormat,datimFormat,adminEmail;{sitemap_legend:hide},createSitemap;{protected_legend:hide},protected;{layout_legend},includeLayout;{cache_legend:hide},includeCache;{chmod_legend:hide},includeChmod;{publish_legend},published,start,stop',
-//        'regular'                     => '{title_legend},title,alias,type;{meta_legend},pageTitle,robots,description;{protected_legend:hide},protected;{layout_legend:hide},includeLayout;{cache_legend:hide},includeCache;{chmod_legend:hide},includeChmod;{search_legend},noSearch;{expert_legend:hide},cssClass,sitemap,hide,guests;{tabnav_legend:hide},tabindex,accesskey;{publish_legend},published,start,stop',
-//        'forward'                     => '{title_legend},title,alias,type;{meta_legend},pageTitle;{redirect_legend},jumpTo,redirect;{protected_legend:hide},protected;{layout_legend:hide},includeLayout;{cache_legend:hide},includeCache;{chmod_legend:hide},includeChmod;{expert_legend:hide},cssClass,sitemap,hide,guests;{tabnav_legend:hide},tabindex,accesskey;{publish_legend},published,start,stop',
-//        'redirect'                    => '{title_legend},title,alias,type;{meta_legend},pageTitle;{redirect_legend},redirect,url,target;{protected_legend:hide},protected;{layout_legend:hide},includeLayout;{cache_legend:hide},includeCache;{chmod_legend:hide},includeChmod;{expert_legend:hide},cssClass,sitemap,hide,guests;{tabnav_legend:hide},tabindex,accesskey;{publish_legend},published,start,stop',
-//		'logout'                      => '{title_legend},title,alias,type;{forward_legend},jumpTo,redirectBack;{protected_legend:hide},protected;{chmod_legend:hide},includeChmod;{expert_legend:hide},hide;;{publish_legend},published,start,stop',
-//		'error_403'                   => '{title_legend},title,alias,type;{meta_legend},pageTitle,robots,description;{forward_legend},autoforward;{layout_legend:hide},includeLayout;{cache_legend:hide},includeCache;{chmod_legend:hide},includeChmod;{expert_legend:hide},cssClass;{publish_legend},published,start,stop',
-//		'error_404'                   => '{title_legend},title,alias,type;{meta_legend},pageTitle,robots,description;{forward_legend},autoforward;{layout_legend:hide},includeLayout;{cache_legend:hide},includeCache;{chmod_legend:hide},includeChmod;{expert_legend:hide},cssClass;{publish_legend},published,start,stop'
 	),
 
 	// Subpalettes
 	'subpalettes' => array
 	(
-		'autoforward'                 => 'jumpTo,redirect',
-		'protected'                   => 'groups',
-		'createSitemap'               => 'sitemapName',
-		'includeLayout'               => 'layout,mobileLayout',
-		'includeCache'                => 'cache,clientCache',
-		'includeChmod'                => 'cuser,cgroup,chmod'
 	),
 
 	// Fields
@@ -230,7 +213,7 @@ $GLOBALS['TL_DCA']['tl_tree'] = array
 			'inputType'               => 'select',
 			'options_callback'        => array(\HeimrichHannot\TreeBundle\EventListener\DataContainer\TreeContainer::class, 'onTypeOptionsCallback'),
 			'eval'                    => array('helpwizard'=>true, 'submitOnChange'=>true, 'tl_class'=>'w50'),
-			'reference'               => &$GLOBALS['TL_LANG']['PTY'],
+			'reference'               => &$GLOBALS['TL_LANG']['tl_tree']['TYPES'],
 			'save_callback' => array
 			(
 				array(\HeimrichHannot\TreeBundle\EventListener\DataContainer\TreeContainer::class, 'onTypeSaveCallback')
@@ -259,130 +242,6 @@ $GLOBALS['TL_DCA']['tl_tree'] = array
 			'eval'                    => array('style'=>'height:60px', 'decodeEntities'=>true, 'tl_class'=>'clr'),
 			'sql'                     => "text NULL"
 		),
-		'redirect' => array
-		(
-			'label'                   => &$GLOBALS['TL_LANG']['tl_page']['redirect'],
-			'default'                 => 'permanent',
-			'exclude'                 => true,
-			'inputType'               => 'select',
-			'options'                 => array('permanent', 'temporary'),
-			'eval'                    => array('tl_class'=>'w50'),
-			'reference'               => &$GLOBALS['TL_LANG']['tl_page'],
-			'sql'                     => "varchar(32) NOT NULL default ''"
-		),
-//		'jumpTo' => array
-//		(
-//			'label'                   => &$GLOBALS['TL_LANG']['tl_page']['jumpTo'],
-//			'exclude'                 => true,
-//			'inputType'               => 'pageTree',
-//			'foreignKey'              => 'tl_page.title',
-//			'eval'                    => array('fieldType'=>'radio'), // do not set mandatory (see #5453)
-//			'save_callback' => array
-//			(
-//				array('tl_page', 'checkJumpTo')
-//			),
-//			'sql'                     => "int(10) unsigned NOT NULL default '0'",
-//			'relation'                => array('type'=>'hasOne', 'load'=>'lazy')
-//		),
-		'redirectBack' => array
-		(
-			'label'                   => &$GLOBALS['TL_LANG']['tl_page']['redirectBack'],
-			'exclude'                 => true,
-			'inputType'               => 'checkbox',
-			'sql'                     => "char(1) NOT NULL default ''"
-		),
-		'url' => array
-		(
-			'label'                   => &$GLOBALS['TL_LANG']['MSC']['url'],
-			'exclude'                 => true,
-			'search'                  => true,
-			'inputType'               => 'text',
-			'eval'                    => array('mandatory'=>true, 'rgxp'=>'url', 'decodeEntities'=>true, 'maxlength'=>255, 'tl_class'=>'w50'),
-			'sql'                     => "varchar(255) NOT NULL default ''"
-		),
-		'target' => array
-		(
-			'label'                   => &$GLOBALS['TL_LANG']['MSC']['target'],
-			'exclude'                 => true,
-			'inputType'               => 'checkbox',
-			'eval'                    => array('tl_class'=>'w50 m12'),
-			'sql'                     => "char(1) NOT NULL default ''"
-		),
-		'adminEmail' => array
-		(
-			'label'                   => &$GLOBALS['TL_LANG']['tl_page']['adminEmail'],
-			'exclude'                 => true,
-			'search'                  => true,
-			'inputType'               => 'text',
-			'eval'                    => array('maxlength'=>255, 'rgxp'=>'friendly', 'decodeEntities'=>true, 'tl_class'=>'w50'),
-			'sql'                     => "varchar(255) NOT NULL default ''"
-		),
-		'dateFormat' => array
-		(
-			'label'                   => &$GLOBALS['TL_LANG']['tl_page']['dateFormat'],
-			'exclude'                 => true,
-			'search'                  => true,
-			'inputType'               => 'text',
-			'eval'                    => array('helpwizard'=>true, 'decodeEntities'=>true, 'tl_class'=>'w50'),
-			'explanation'             => 'dateFormat',
-			'sql'                     => "varchar(32) NOT NULL default ''"
-		),
-		'timeFormat' => array
-		(
-			'label'                   => &$GLOBALS['TL_LANG']['tl_page']['timeFormat'],
-			'exclude'                 => true,
-			'search'                  => true,
-			'inputType'               => 'text',
-			'eval'                    => array('decodeEntities'=>true, 'tl_class'=>'w50'),
-			'sql'                     => "varchar(32) NOT NULL default ''"
-		),
-		'datimFormat' => array
-		(
-			'label'                   => &$GLOBALS['TL_LANG']['tl_page']['datimFormat'],
-			'exclude'                 => true,
-			'search'                  => true,
-			'inputType'               => 'text',
-			'eval'                    => array('decodeEntities'=>true, 'tl_class'=>'w50'),
-			'sql'                     => "varchar(32) NOT NULL default ''"
-		),
-		'createSitemap' => array
-		(
-			'label'                   => &$GLOBALS['TL_LANG']['tl_page']['createSitemap'],
-			'exclude'                 => true,
-			'inputType'               => 'checkbox',
-			'eval'                    => array('submitOnChange'=>true),
-			'sql'                     => "char(1) NOT NULL default ''"
-		),
-//		'sitemapName' => array
-//		(
-//			'label'                   => &$GLOBALS['TL_LANG']['tl_page']['sitemapName'],
-//			'exclude'                 => true,
-//			'search'                  => true,
-//			'inputType'               => 'text',
-//			'eval'                    => array('mandatory'=>true, 'unique'=>true, 'rgxp'=>'alnum', 'decodeEntities'=>true, 'maxlength'=>32, 'tl_class'=>'w50'),
-//			'save_callback' => array
-//			(
-//				array('tl_page', 'checkFeedAlias')
-//			),
-//			'sql'                     => "varchar(32) NOT NULL default ''"
-//		),
-		'autoforward' => array
-		(
-			'label'                   => &$GLOBALS['TL_LANG']['tl_page']['autoforward'],
-			'exclude'                 => true,
-			'inputType'               => 'checkbox',
-			'eval'                    => array('submitOnChange'=>true),
-			'sql'                     => "char(1) NOT NULL default ''"
-		),
-		'protected' => array
-		(
-			'label'                   => &$GLOBALS['TL_LANG']['tl_page']['protected'],
-			'exclude'                 => true,
-			'filter'                  => true,
-			'inputType'               => 'checkbox',
-			'eval'                    => array('submitOnChange'=>true),
-			'sql'                     => "char(1) NOT NULL default ''"
-		),
 //		'groups' => array
 //		(
 //			'label'                   => &$GLOBALS['TL_LANG']['tl_page']['groups'],
@@ -394,173 +253,6 @@ $GLOBALS['TL_DCA']['tl_tree'] = array
 //			'sql'                     => "blob NULL",
 //			'relation'                => array('type'=>'hasMany', 'load'=>'lazy')
 //		),
-		'includeLayout' => array
-		(
-			'label'                   => &$GLOBALS['TL_LANG']['tl_page']['includeLayout'],
-			'exclude'                 => true,
-			'inputType'               => 'checkbox',
-			'eval'                    => array('submitOnChange'=>true),
-			'sql'                     => "char(1) NOT NULL default ''"
-		),
-		'layout' => array
-		(
-			'label'                   => &$GLOBALS['TL_LANG']['tl_page']['layout'],
-			'exclude'                 => true,
-			'search'                  => true,
-			'inputType'               => 'select',
-			'foreignKey'              => 'tl_layout.name',
-//			'options_callback'        => array('tl_page', 'getPageLayouts'),
-			'eval'                    => array('chosen'=>true, 'tl_class'=>'w50'),
-			'sql'                     => "int(10) unsigned NOT NULL default '0'",
-			'relation'                => array('type'=>'hasOne', 'load'=>'lazy')
-		),
-		'mobileLayout' => array
-		(
-			'label'                   => &$GLOBALS['TL_LANG']['tl_page']['mobileLayout'],
-			'exclude'                 => true,
-			'search'                  => true,
-			'inputType'               => 'select',
-			'foreignKey'              => 'tl_layout.name',
-//			'options_callback'        => array('tl_page', 'getPageLayouts'),
-			'eval'                    => array('includeBlankOption'=>true, 'chosen'=>true, 'tl_class'=>'w50'),
-			'sql'                     => "int(10) unsigned NOT NULL default '0'",
-			'relation'                => array('type'=>'hasOne', 'load'=>'lazy')
-		),
-		'includeCache' => array
-		(
-			'label'                   => &$GLOBALS['TL_LANG']['tl_page']['includeCache'],
-			'exclude'                 => true,
-			'inputType'               => 'checkbox',
-			'eval'                    => array('submitOnChange'=>true),
-			'sql'                     => "char(1) NOT NULL default ''"
-		),
-		'cache' => array
-		(
-			'label'                   => &$GLOBALS['TL_LANG']['tl_page']['cache'],
-			'default'                 => 0,
-			'exclude'                 => true,
-			'search'                  => true,
-			'inputType'               => 'select',
-			'options'                 => array(0, 5, 15, 30, 60, 300, 900, 1800, 3600, 10800, 21600, 43200, 86400, 259200, 604800, 2592000),
-			'reference'               => &$GLOBALS['TL_LANG']['CACHE'],
-			'eval'                    => array('tl_class'=>'w50'),
-			'sql'                     => "int(10) unsigned NOT NULL default '0'"
-		),
-		'clientCache' => array
-		(
-			'label'                   => &$GLOBALS['TL_LANG']['tl_page']['clientCache'],
-			'default'                 => 0,
-			'exclude'                 => true,
-			'search'                  => true,
-			'inputType'               => 'select',
-			'options'                 => array(0, 5, 15, 30, 60, 300, 900, 1800, 3600, 10800, 21600, 43200, 86400, 259200, 604800, 2592000),
-			'reference'               => &$GLOBALS['TL_LANG']['CACHE'],
-			'eval'                    => array('tl_class'=>'w50'),
-			'sql'                     => "int(10) unsigned NOT NULL default '0'"
-		),
-		'includeChmod' => array
-		(
-			'label'                   => &$GLOBALS['TL_LANG']['tl_page']['includeChmod'],
-			'exclude'                 => true,
-			'inputType'               => 'checkbox',
-			'eval'                    => array('submitOnChange'=>true),
-			'sql'                     => "char(1) NOT NULL default ''"
-		),
-		'cuser' => array
-		(
-			'label'                   => &$GLOBALS['TL_LANG']['tl_page']['cuser'],
-			'default'                 => (int) Config::get('defaultUser'),
-			'search'                  => true,
-			'exclude'                 => true,
-			'inputType'               => 'select',
-			'foreignKey'              => 'tl_user.name',
-			'eval'                    => array('mandatory'=>true, 'chosen'=>true, 'includeBlankOption'=>true, 'tl_class'=>'w50'),
-			'sql'                     => "int(10) unsigned NOT NULL default '0'",
-			'relation'                => array('type'=>'hasOne', 'load'=>'lazy')
-		),
-		'cgroup' => array
-		(
-			'label'                   => &$GLOBALS['TL_LANG']['tl_page']['cgroup'],
-			'default'                 => (int) Config::get('defaultGroup'),
-			'search'                  => true,
-			'exclude'                 => true,
-			'inputType'               => 'select',
-			'foreignKey'              => 'tl_user_group.name',
-			'eval'                    => array('mandatory'=>true, 'chosen'=>true, 'includeBlankOption'=>true, 'tl_class'=>'w50'),
-			'sql'                     => "int(10) unsigned NOT NULL default '0'",
-			'relation'                => array('type'=>'hasOne', 'load'=>'lazy')
-		),
-		'chmod' => array
-		(
-			'label'                   => &$GLOBALS['TL_LANG']['tl_page']['chmod'],
-			'default'                 => Config::get('defaultChmod'),
-			'exclude'                 => true,
-			'inputType'               => 'chmod',
-			'eval'                    => array('tl_class'=>'clr'),
-			'sql'                     => "varchar(255) NOT NULL default ''"
-		),
-		'noSearch' => array
-		(
-			'label'                   => &$GLOBALS['TL_LANG']['tl_page']['noSearch'],
-			'exclude'                 => true,
-			'filter'                  => true,
-			'inputType'               => 'checkbox',
-			'sql'                     => "char(1) NOT NULL default ''"
-		),
-		'cssClass' => array
-		(
-			'label'                   => &$GLOBALS['TL_LANG']['tl_page']['cssClass'],
-			'exclude'                 => true,
-			'search'                  => true,
-			'inputType'               => 'text',
-			'eval'                    => array('maxlength'=>64, 'tl_class'=>'w50'),
-			'sql'                     => "varchar(64) NOT NULL default ''"
-		),
-		'sitemap' => array
-		(
-			'label'                   => &$GLOBALS['TL_LANG']['tl_page']['sitemap'],
-			'exclude'                 => true,
-			'inputType'               => 'select',
-			'options'                 => array('map_default', 'map_always', 'map_never'),
-			'eval'                    => array('maxlength'=>32, 'tl_class'=>'w50'),
-			'reference'               => &$GLOBALS['TL_LANG']['tl_page'],
-			'sql'                     => "varchar(32) NOT NULL default ''"
-		),
-		'hide' => array
-		(
-			'label'                   => &$GLOBALS['TL_LANG']['tl_page']['hide'],
-			'exclude'                 => true,
-			'inputType'               => 'checkbox',
-			'eval'                    => array('tl_class'=>'w50'),
-			'sql'                     => "char(1) NOT NULL default ''"
-		),
-		'guests' => array
-		(
-			'label'                   => &$GLOBALS['TL_LANG']['tl_page']['guests'],
-			'exclude'                 => true,
-			'filter'                  => true,
-			'inputType'               => 'checkbox',
-			'eval'                    => array('tl_class'=>'w50'),
-			'sql'                     => "char(1) NOT NULL default ''"
-		),
-		'tabindex' => array
-		(
-			'label'                   => &$GLOBALS['TL_LANG']['tl_page']['tabindex'],
-			'exclude'                 => true,
-			'search'                  => true,
-			'inputType'               => 'text',
-			'eval'                    => array('rgxp'=>'natural', 'nospace'=>true, 'tl_class'=>'w50'),
-			'sql'                     => "smallint(5) unsigned NOT NULL default '0'"
-		),
-		'accesskey' => array
-		(
-			'label'                   => &$GLOBALS['TL_LANG']['tl_page']['accesskey'],
-			'exclude'                 => true,
-			'search'                  => true,
-			'inputType'               => 'text',
-			'eval'                    => array('rgxp'=>'alnum', 'maxlength'=>1, 'tl_class'=>'w50'),
-			'sql'                     => "char(1) NOT NULL default ''"
-		),
 		'published' => array
 		(
 			'label'                   => &$GLOBALS['TL_LANG']['tl_page']['published'],
@@ -609,232 +301,6 @@ $GLOBALS['TL_DCA']['tl_tree'] = array
 //	{
 //		parent::__construct();
 //		$this->import('BackendUser', 'User');
-//	}
-//
-//	/**
-//	 * Check permissions to edit table tl_page
-//	 *
-//	 * @throws Contao\CoreBundle\Exception\AccessDeniedException
-//	 */
-//	public function checkPermission()
-//	{
-//		if ($this->User->isAdmin)
-//		{
-//			return;
-//		}
-//
-//		/** @var Symfony\Component\HttpFoundation\Session\SessionInterface $objSession */
-//		$objSession = System::getContainer()->get('session');
-//
-//		$session = $objSession->all();
-//
-//		// Set the default page user and group
-//		$GLOBALS['TL_DCA']['tl_page']['fields']['cuser']['default'] = (int) Config::get('defaultUser') ?: $this->User->id;
-//		$GLOBALS['TL_DCA']['tl_page']['fields']['cgroup']['default'] = (int) Config::get('defaultGroup') ?: (int) $this->User->groups[0];
-//
-//		// Restrict the page tree
-//		if (empty($this->User->pagemounts) || !is_array($this->User->pagemounts))
-//		{
-//			$root = array(0);
-//		}
-//		else
-//		{
-//			$root = $this->User->pagemounts;
-//		}
-//
-//		$GLOBALS['TL_DCA']['tl_page']['list']['sorting']['root'] = $root;
-//
-//		// Set allowed page IDs (edit multiple)
-//		if (is_array($session['CURRENT']['IDS']))
-//		{
-//			$edit_all = array();
-//			$delete_all = array();
-//
-//			foreach ($session['CURRENT']['IDS'] as $id)
-//			{
-//				$objPage = $this->Database->prepare("SELECT id, pid, type, includeChmod, chmod, cuser, cgroup FROM tl_page WHERE id=?")
-//										  ->limit(1)
-//										  ->execute($id);
-//
-//				if ($objPage->numRows < 1 || !$this->User->hasAccess($objPage->type, 'alpty'))
-//				{
-//					continue;
-//				}
-//
-//				$row = $objPage->row();
-//
-//				if ($this->User->isAllowed(BackendUser::CAN_EDIT_PAGE, $row))
-//				{
-//					$edit_all[] = $id;
-//				}
-//
-//				// Mounted pages cannot be deleted
-//				if ($this->User->isAllowed(BackendUser::CAN_DELETE_PAGE, $row) && !$this->User->hasAccess($id, 'pagemounts'))
-//				{
-//					$delete_all[] = $id;
-//				}
-//			}
-//
-//			$session['CURRENT']['IDS'] = (Input::get('act') == 'deleteAll') ? $delete_all : $edit_all;
-//		}
-//
-//		// Set allowed clipboard IDs
-//		if (isset($session['CLIPBOARD']['tl_page']) && is_array($session['CLIPBOARD']['tl_page']['id']))
-//		{
-//			$clipboard = array();
-//
-//			foreach ($session['CLIPBOARD']['tl_page']['id'] as $id)
-//			{
-//				$objPage = $this->Database->prepare("SELECT id, pid, type, includeChmod, chmod, cuser, cgroup FROM tl_page WHERE id=?")
-//										  ->limit(1)
-//										  ->execute($id);
-//
-//				if ($objPage->numRows < 1 || !$this->User->hasAccess($objPage->type, 'alpty'))
-//				{
-//					continue;
-//				}
-//
-//				if ($this->User->isAllowed(BackendUser::CAN_EDIT_PAGE_HIERARCHY, $objPage->row()))
-//				{
-//					$clipboard[] = $id;
-//				}
-//			}
-//
-//			$session['CLIPBOARD']['tl_page']['id'] = $clipboard;
-//		}
-//
-//		// Overwrite session
-//		$objSession->replace($session);
-//
-//		// Check permissions to save and create new
-//		if (Input::get('act') == 'edit')
-//		{
-//			$objPage = $this->Database->prepare("SELECT * FROM tl_page WHERE id=(SELECT pid FROM tl_page WHERE id=?)")
-//									  ->limit(1)
-//									  ->execute(Input::get('id'));
-//
-//			if ($objPage->numRows && !$this->User->isAllowed(BackendUser::CAN_EDIT_PAGE_HIERARCHY, $objPage->row()))
-//			{
-//				$GLOBALS['TL_DCA']['tl_page']['config']['closed'] = true;
-//			}
-//		}
-//
-//		// Check current action
-//		if (Input::get('act') && Input::get('act') != 'paste')
-//		{
-//			$permission = 0;
-//			$cid = CURRENT_ID ?: Input::get('id');
-//			$ids = ($cid != '') ? array($cid) : array();
-//
-//			// Set permission
-//			switch (Input::get('act'))
-//			{
-//				case 'edit':
-//				case 'toggle':
-//					$permission = BackendUser::CAN_EDIT_PAGE;
-//					break;
-//
-//				case 'move':
-//					$permission = BackendUser::CAN_EDIT_PAGE_HIERARCHY;
-//					$ids[] = Input::get('sid');
-//					break;
-//
-//				case 'create':
-//				case 'copy':
-//				case 'copyAll':
-//				case 'cut':
-//				case 'cutAll':
-//					$permission = BackendUser::CAN_EDIT_PAGE_HIERARCHY;
-//
-//					// Check the parent page in "paste into" mode
-//					if (Input::get('mode') == 2)
-//					{
-//						$ids[] = Input::get('pid');
-//					}
-//					// Check the parent's parent page in "paste after" mode
-//					else
-//					{
-//						$objPage = $this->Database->prepare("SELECT pid FROM tl_page WHERE id=?")
-//												  ->limit(1)
-//												  ->execute(Input::get('pid'));
-//
-//						$ids[] = $objPage->pid;
-//					}
-//					break;
-//
-//				case 'delete':
-//					$permission = BackendUser::CAN_DELETE_PAGE;
-//					break;
-//			}
-//
-//			// Check user permissions
-//			$pagemounts = array();
-//
-//			// Get all allowed pages for the current user
-//			foreach ($this->User->pagemounts as $root)
-//			{
-//				if (Input::get('act') != 'delete')
-//				{
-//					$pagemounts[] = $root;
-//				}
-//
-//				$pagemounts = array_merge($pagemounts, $this->Database->getChildRecords($root, 'tl_page'));
-//			}
-//
-//			$error = false;
-//			$pagemounts = array_unique($pagemounts);
-//
-//			// Do not allow to paste after pages on the root level (pagemounts)
-//			if ((Input::get('act') == 'cut' || Input::get('act') == 'cutAll') && Input::get('mode') == 1 && in_array(Input::get('pid'), $this->eliminateNestedPages($this->User->pagemounts)))
-//			{
-//				throw new Contao\CoreBundle\Exception\AccessDeniedException('Not enough permissions to paste page ID ' . Input::get('id') . ' after mounted page ID ' . Input::get('pid') . ' (root level).');
-//			}
-//
-//			// Check each page
-//			foreach ($ids as $i=>$id)
-//			{
-//				if (!in_array($id, $pagemounts))
-//				{
-//					$this->log('Page ID ' . $id . ' was not mounted', __METHOD__, TL_ERROR);
-//
-//					$error = true;
-//					break;
-//				}
-//
-//				// Get the page object
-//				$objPage = $this->Database->prepare("SELECT * FROM tl_page WHERE id=?")
-//										  ->limit(1)
-//										  ->execute($id);
-//
-//				if ($objPage->numRows < 1)
-//				{
-//					continue;
-//				}
-//
-//				// Check whether the current user is allowed to access the current page
-//				if (Input::get('act') != 'show' && !$this->User->isAllowed($permission, $objPage->row()))
-//				{
-//					$error = true;
-//					break;
-//				}
-//
-//				// Check the type of the first page (not the following parent pages)
-//				// In "edit multiple" mode, $ids contains only the parent ID, therefore check $id != $_GET['pid'] (see #5620)
-//				if ($i == 0 && $id != Input::get('pid') && Input::get('act') != 'create' && !$this->User->hasAccess($objPage->type, 'alpty'))
-//				{
-//					$this->log('Not enough permissions to  ' . Input::get('act') . ' ' . $objPage->type . ' pages', __METHOD__, TL_ERROR);
-//
-//					$error = true;
-//					break;
-//				}
-//			}
-//
-//			// Redirect if there is an error
-//			if ($error)
-//			{
-//				throw new Contao\CoreBundle\Exception\AccessDeniedException('Not enough permissions to ' . Input::get('act') . ' page ID ' . $cid . ' or paste after/into page ID ' . Input::get('pid') . '.');
-//			}
-//		}
 //	}
 //
 //	/**
