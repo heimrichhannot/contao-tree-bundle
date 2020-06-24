@@ -14,6 +14,17 @@ namespace HeimrichHannot\TreeBundle\Model;
 
 use Contao\Model;
 
+/**
+ * Class TreeModel
+ * @package HeimrichHannot\TreeBundle\Model
+ *
+ * @property int $id;
+ * @property int $pid;
+ * @property string $title;
+ * @property string $internalTitle;
+ * @property string $alias;
+ * @property string $type;
+ */
 class TreeModel extends Model
 {
     protected static $strTable = 'tl_tree';

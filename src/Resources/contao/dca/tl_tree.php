@@ -5,7 +5,7 @@ $GLOBALS['TL_DCA']['tl_tree'] = array
 	// Config
 	'config' => array
 	(
-        'label'                       => Config::get('websiteTitle'),
+        'label'                       => '<b>'.$GLOBALS['TL_LANG']['DCA']['tl_tree']['TYPES']['mainroot'].'</b> '.Config::get('websiteTitle'),
 		'dataContainer'               => 'Table',
 		'enableVersioning'            => true,
 		'onload_callback' => array
@@ -78,14 +78,14 @@ $GLOBALS['TL_DCA']['tl_tree'] = array
 		(
 			'edit' => array
 			(
-				'label'               => &$GLOBALS['TL_LANG']['tl_page']['edit'],
+				'label'               => &$GLOBALS['TL_LANG']['tl_tree']['edit'],
 				'href'                => 'act=edit',
 				'icon'                => 'edit.svg',
 //				'button_callback'     => array('tl_page', 'editPage')
 			),
 			'copy' => array
 			(
-				'label'               => &$GLOBALS['TL_LANG']['tl_page']['copy'],
+				'label'               => &$GLOBALS['TL_LANG']['tl_tree']['copy'],
 				'href'                => 'act=paste&amp;mode=copy',
 				'icon'                => 'copy.svg',
 				'attributes'          => 'onclick="Backend.getScrollOffset()"',
@@ -93,7 +93,7 @@ $GLOBALS['TL_DCA']['tl_tree'] = array
 			),
 			'copyChilds' => array
 			(
-				'label'               => &$GLOBALS['TL_LANG']['tl_page']['copyChilds'],
+				'label'               => &$GLOBALS['TL_LANG']['tl_tree']['copyChilds'],
 				'href'                => 'act=paste&amp;mode=copy&amp;childs=1',
 				'icon'                => 'copychilds.svg',
 				'attributes'          => 'onclick="Backend.getScrollOffset()"',
@@ -101,7 +101,7 @@ $GLOBALS['TL_DCA']['tl_tree'] = array
 			),
 			'cut' => array
 			(
-				'label'               => &$GLOBALS['TL_LANG']['tl_page']['cut'],
+				'label'               => &$GLOBALS['TL_LANG']['tl_tree']['cut'],
 				'href'                => 'act=paste&amp;mode=cut',
 				'icon'                => 'cut.svg',
 				'attributes'          => 'onclick="Backend.getScrollOffset()"',
@@ -109,7 +109,7 @@ $GLOBALS['TL_DCA']['tl_tree'] = array
 			),
 			'delete' => array
 			(
-				'label'               => &$GLOBALS['TL_LANG']['tl_page']['delete'],
+				'label'               => &$GLOBALS['TL_LANG']['tl_tree']['delete'],
 				'href'                => 'act=delete',
 				'icon'                => 'delete.svg',
 				'attributes'          => 'onclick="if(!confirm(\'' . $GLOBALS['TL_LANG']['MSC']['deleteConfirm'] . '\'))return false;Backend.getScrollOffset()"',
@@ -117,24 +117,17 @@ $GLOBALS['TL_DCA']['tl_tree'] = array
 			),
 			'toggle' => array
 			(
-				'label'               => &$GLOBALS['TL_LANG']['tl_page']['toggle'],
+				'label'               => &$GLOBALS['TL_LANG']['tl_tree']['toggle'],
 				'icon'                => 'visible.svg',
 				'attributes'          => 'onclick="Backend.getScrollOffset();return AjaxRequest.toggleVisibility(this,%s)"',
 //				'button_callback'     => array('tl_page', 'toggleIcon')
 			),
 			'show' => array
 			(
-				'label'               => &$GLOBALS['TL_LANG']['tl_page']['show'],
+				'label'               => &$GLOBALS['TL_LANG']['tl_tree']['show'],
 				'href'                => 'act=show',
 				'icon'                => 'show.svg'
 			),
-			'articles' => array
-			(
-				'label'               => &$GLOBALS['TL_LANG']['tl_page']['articles'],
-				'href'                => 'do=article',
-				'icon'                => 'article.svg',
-//				'button_callback'     => array('tl_page', 'editArticles')
-			)
 		)
 	),
 
@@ -240,38 +233,23 @@ $GLOBALS['TL_DCA']['tl_tree'] = array
 			'reference'               => &$GLOBALS['TL_LANG']['PTY'],
 			'save_callback' => array
 			(
-				array(\HeimrichHannot\TreeBundle\EventListener\DataContainer\TreeContainer::class, 'checkRootType')
+				array(\HeimrichHannot\TreeBundle\EventListener\DataContainer\TreeContainer::class, 'onTypeSaveCallback')
 			),
 			'sql'                     => "varchar(32) NOT NULL default ''"
 		),
-		'pageTitle' => array
-		(
-			'label'                   => &$GLOBALS['TL_LANG']['tl_page']['pageTitle'],
-			'exclude'                 => true,
-			'search'                  => true,
-			'inputType'               => 'text',
-			'eval'                    => array('maxlength'=>255, 'decodeEntities'=>true, 'tl_class'=>'w50'),
-			'sql'                     => "varchar(255) NOT NULL default ''"
-		),
-		'language' => array
-		(
-			'label'                   => &$GLOBALS['TL_LANG']['tl_page']['language'],
-			'exclude'                 => true,
-			'search'                  => true,
-			'inputType'               => 'text',
-			'eval'                    => array('mandatory'=>true, 'rgxp'=>'language', 'maxlength'=>5, 'nospace'=>true, 'doNotCopy'=>true, 'tl_class'=>'w50'),
-			'sql'                     => "varchar(5) NOT NULL default ''"
-		),
-		'robots' => array
-		(
-			'label'                   => &$GLOBALS['TL_LANG']['tl_page']['robots'],
-			'exclude'                 => true,
-			'search'                  => true,
-			'inputType'               => 'select',
-			'options'                 => array('index,follow', 'index,nofollow', 'noindex,follow', 'noindex,nofollow'),
-			'eval'                    => array('tl_class'=>'w50'),
-			'sql'                     => "varchar(32) NOT NULL default ''"
-		),
+        'member' => array
+        (
+            'label'                   => &$GLOBALS['TL_LANG']['tl_tree']['member'],
+            'exclude'                 => false,
+            'filter'                  => true,
+            'sorting'                 => true,
+            'flag'             => 1,
+            'inputType'               => 'select',
+            'foreignKey'              => 'tl_member.firstname',
+            'eval'                    => array('mandatory'=>true, 'multiple'=>false, 'chosen' => true, 'includeBlankOption' => true, 'tl_class' => 'w50'),
+            'sql'                     => "int(10) unsigned NOT NULL default '0'",
+            'relation'                => array('type'=>'hasOne', 'load'=>'lazy'),
+        ),
 		'description' => array
 		(
 			'label'                   => &$GLOBALS['TL_LANG']['tl_page']['description'],
@@ -405,17 +383,17 @@ $GLOBALS['TL_DCA']['tl_tree'] = array
 			'eval'                    => array('submitOnChange'=>true),
 			'sql'                     => "char(1) NOT NULL default ''"
 		),
-		'groups' => array
-		(
-			'label'                   => &$GLOBALS['TL_LANG']['tl_page']['groups'],
-			'exclude'                 => true,
-			'filter'                  => true,
-			'inputType'               => 'checkbox',
-			'foreignKey'              => 'tl_member_group.name',
-			'eval'                    => array('mandatory'=>true, 'multiple'=>true),
-			'sql'                     => "blob NULL",
-			'relation'                => array('type'=>'hasMany', 'load'=>'lazy')
-		),
+//		'groups' => array
+//		(
+//			'label'                   => &$GLOBALS['TL_LANG']['tl_page']['groups'],
+//			'exclude'                 => true,
+//			'filter'                  => true,
+//			'inputType'               => 'checkbox',
+//			'foreignKey'              => 'tl_member_group.name',
+//			'eval'                    => array('mandatory'=>true, 'multiple'=>true),
+//			'sql'                     => "blob NULL",
+//			'relation'                => array('type'=>'hasMany', 'load'=>'lazy')
+//		),
 		'includeLayout' => array
 		(
 			'label'                   => &$GLOBALS['TL_LANG']['tl_page']['includeLayout'],
@@ -1314,27 +1292,6 @@ $GLOBALS['TL_DCA']['tl_tree'] = array
 //		$root = func_get_arg(7);
 //
 //		return ($this->User->hasAccess($row['type'], 'alpty') && $this->User->isAllowed(BackendUser::CAN_DELETE_PAGE, $row) && ($this->User->isAdmin || !in_array($row['id'], $root))) ? '<a href="' . $this->addToUrl($href . '&amp;id=' . $row['id']) . '" title="' . StringUtil::specialchars($title) . '"' . $attributes . '>' . Image::getHtml($icon, $label) . '</a> ' : Image::getHtml(preg_replace('/\.svg$/i', '_.svg', $icon)) . ' ';
-//	}
-//
-//	/**
-//	 * Generate an "edit articles" button and return it as string
-//	 *
-//	 * @param array  $row
-//	 * @param string $href
-//	 * @param string $label
-//	 * @param string $title
-//	 * @param string $icon
-//	 *
-//	 * @return string
-//	 */
-//	public function editArticles($row, $href, $label, $title, $icon)
-//	{
-//		if (!$this->User->hasAccess('article', 'modules'))
-//		{
-//			return '';
-//		}
-//
-//		return ($row['type'] == 'regular' || $row['type'] == 'error_403' || $row['type'] == 'error_404') ? '<a href="' . $this->addToUrl($href . '&amp;pn=' . $row['id']) . '" title="' . StringUtil::specialchars($title) . '">' . Image::getHtml($icon, $label) . '</a> ' : Image::getHtml(preg_replace('/\.svg$/i', '_.svg', $icon)) . ' ';
 //	}
 //
 //	/**

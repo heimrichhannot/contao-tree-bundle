@@ -21,12 +21,11 @@ use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\FetchMode;
 use Exception;
 use HeimrichHannot\TreeBundle\Collection\NodeTypeCollection;
-use HeimrichHannot\TreeBundle\TreeNode\RootNodeInterface;
+use HeimrichHannot\TreeBundle\Model\TreeModel;
 
 class TreeContainer
 {
     const PREPEND_PALETTE = '{title_legend},title,alias,type;';
-    const PREPEND_ROOT_PALETTE = '{title_legend},title,internalTitle,alias,type;';
 
     /**
      * @var Connection
@@ -48,12 +47,28 @@ class TreeContainer
      */
     public function onLoadCallback(DataContainer $dc)
     {
+        $node = TreeModel::findByPk($dc->id);
+        if (0 == $node->pid) {
+            $palettes = &$GLOBALS['TL_DCA']['tl_tree']['palettes'];
+            $palettes[$node->type] = str_replace(',title,',',title,internalTitle,', $palettes[$node->type]);
+        }
         $this->setRootType($dc);
+    }
+
+    /**
+     * @param $varValue
+     * @param DataContainer $dc
+     * @throws Exception
+     */
+    public function onTypeSaveCallback($varValue, DataContainer $dc): string
+    {
+        $varValue = $this->checkRootType($varValue, $dc);
+        return $varValue;
     }
 
 
     /**
-	 * Make new top-level pages root pages
+	 * Make new top-level nodes root nodes
 	 *
 	 * @param DataContainer $dc
 	 */
@@ -146,9 +161,7 @@ class TreeContainer
      */
     public function checkRootType($varValue, DataContainer $dc)
     {
-        $nodeType = $this->nodeTypeCollection->getNodeType($varValue);
-        if (!$nodeType || (!($nodeType instanceof RootNodeInterface) && $dc->activeRecord->pid == 0))
-        {
+        if (!in_array($varValue, $this->nodeTypeCollection->getRootNodeTypes()) && $dc->activeRecord->pid == 0) {
             throw new Exception($GLOBALS['TL_LANG']['ERR']['topLevelRoot']);
         }
         return $varValue;

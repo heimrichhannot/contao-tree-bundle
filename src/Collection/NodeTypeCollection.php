@@ -12,7 +12,6 @@
 namespace HeimrichHannot\TreeBundle\Collection;
 
 
-use HeimrichHannot\TreeBundle\TreeNode\RootNodeInterface;
 use HeimrichHannot\TreeBundle\TreeNode\TreeNodeInterface;
 
 class NodeTypeCollection
@@ -29,10 +28,6 @@ class NodeTypeCollection
      * @var array|null
      */
     protected $rootNodeTypes = null;
-    /**
-     * @var array|null
-     */
-    protected $branchNodeTypes = null;
 
 
     /**
@@ -56,12 +51,8 @@ class NodeTypeCollection
             trigger_error("Duplicate node type.", E_USER_WARNING);
         }
         $this->nodeTypes[$nodeType::getType()] = $nodeType;
-        if ($nodeType instanceof RootNodeInterface)
-        {
+        if (!$nodeType::disallowRoot()) {
             $this->rootNodeTypes[] = $nodeType::getType();
-        } else
-        {
-            $this->branchNodeTypes[] = $nodeType::getType();
         }
     }
 
@@ -134,6 +125,6 @@ class NodeTypeCollection
     public function getBranchNodeTypes()
     {
         $this->createIndex();
-        return $this->branchNodeTypes;
+        return array_keys($this->nodeTypes);
     }
 }

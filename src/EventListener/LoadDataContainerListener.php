@@ -14,7 +14,6 @@ namespace HeimrichHannot\TreeBundle\EventListener;
 
 use HeimrichHannot\TreeBundle\Collection\NodeTypeCollection;
 use HeimrichHannot\TreeBundle\EventListener\DataContainer\TreeContainer;
-use HeimrichHannot\TreeBundle\TreeNode\RootNodeInterface;
 use HeimrichHannot\TreeBundle\TreeNode\TreeNodeInterface;
 
 class LoadDataContainerListener
@@ -43,12 +42,7 @@ class LoadDataContainerListener
 
         /** @var TreeNodeInterface $nodeType */
         foreach ($this->nodeTypeCollection->getNodeTypes() as $nodeType) {
-            if ($nodeType instanceof RootNodeInterface) {
-                $palette = TreeContainer::PREPEND_ROOT_PALETTE;
-            } else {
-                $palette = TreeContainer::PREPEND_PALETTE;
-            }
-            $dca['palettes'][$nodeType::getType()] = $palette.$nodeType::getPalette();
+            $dca['palettes'][$nodeType::getType()] = TreeContainer::PREPEND_PALETTE.$nodeType::getPalette();
         }
     }
 }

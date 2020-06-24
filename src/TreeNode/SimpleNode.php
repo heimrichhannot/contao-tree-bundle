@@ -24,4 +24,14 @@ class SimpleNode implements TreeNodeInterface
     {
         return '{content_legend},description;';
     }
+
+    public static function allowedChilds(): ?array
+    {
+        return null;
+    }
+
+    public static function disallowRoot(): bool
+    {
+        return false;
+    }
 }

@@ -12,16 +12,26 @@
 namespace HeimrichHannot\TreeBundle\TreeNode;
 
 
-class SimpleRootNode implements TreeNodeInterface, RootNodeInterface
+class MemberNode implements TreeNodeInterface
 {
 
     public static function getType(): string
     {
-        return 'simple_root_node';
+        return 'member_node';
     }
 
     public static function getPalette(): string
     {
-        return '{content_legend},description;';
+        return '{content_legend},member,description;';
+    }
+
+    public static function allowedChilds(): ?array
+    {
+        return null;
+    }
+
+    public static function disallowRoot(): bool
+    {
+        return false;
     }
 }

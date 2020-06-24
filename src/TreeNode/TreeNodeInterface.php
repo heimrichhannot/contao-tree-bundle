@@ -34,4 +34,19 @@ interface TreeNodeInterface
      * @return string
      */
     public static function getPalette(): string;
+
+    /**
+     * Return a list of node types that are allowed to be childs of this node.
+     * Return null if there should be no limitation.
+     *
+     * @return array|null
+     */
+    public static function allowedChilds(): ?array;
+
+    /**
+     * Return true if node type is not allowed to be used as root.
+     *
+     * @return bool
+     */
+    public static function disallowRoot(): bool;
 }
