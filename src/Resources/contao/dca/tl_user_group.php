@@ -27,7 +27,7 @@ $GLOBALS['TL_DCA']['tl_user_group']['fields']['huh_treep'] = [
     'label'     => &$GLOBALS['TL_LANG']['tl_user']['huh_treep'],
     'exclude'   => true,
     'inputType' => 'checkbox',
-    'options'   => ['create', 'delete'],
+    'options'   => ['createRoot', 'create', 'deleteRoot', 'delete'],
     'reference' => &$GLOBALS['TL_LANG']['MSC'],
     'eval'      => ['multiple' => true],
     'sql'       => "blob NULL"

@@ -12,9 +12,9 @@
 namespace HeimrichHannot\TreeBundle\EventListener\DataContainer;
 
 
-use Contao\Backend;
 use Contao\BackendUser;
-use Contao\Config;
+use Contao\CoreBundle\Exception\AccessDeniedException;
+use Contao\Database;
 use Contao\DataContainer;
 use Contao\Input;
 use Contao\StringUtil;
@@ -27,7 +27,7 @@ use Symfony\Component\HttpFoundation\Session\SessionInterface;
 
 class TreeContainer
 {
-    const PREPEND_PALETTE = '{title_legend},title,alias,type;';
+    const PREPEND_PALETTE = '{type_legend},title,alias,type;';
 
     /**
      * @var Connection
@@ -111,9 +111,9 @@ class TreeContainer
 		    $stmt = $this->connection->prepare("SELECT * FROM " . $dc->table . " WHERE id=? LIMIT 1");
 		    $stmt->execute([Input::get('pid')]);
 
-			$node = $stmt->fetch(FetchMode::CUSTOM_OBJECT);
+			$node = $stmt->fetch();
 
-			if ($node->pid == 0)
+			if ($node['pid'] == 0)
 			{
 				$GLOBALS['TL_DCA']['tl_tree']['fields']['type']['default'] = $defaultRootPageType;
 			}
@@ -186,7 +186,7 @@ class TreeContainer
 		    $nodeTypes = $this->nodeTypeCollection->getRootNodeTypes();
         } else {
 		    $nodeTypes = $this->nodeTypeCollection->getBranchNodeTypes();
-		    $parentNodeModel = TreeModel::findByPk($dc->pid);
+		    $parentNodeModel = TreeModel::findByPk($dc->activeRecord->pid);
 		    if ($parentNodeModel && ($parentNodeType = $this->nodeTypeCollection->getNodeType($parentNodeModel->type))) {
 		        $allowedNodeTypes = $parentNodeType::allowedChilds();
             }
@@ -194,14 +194,11 @@ class TreeContainer
 
 		foreach ($nodeTypes as $nodeType)
         {
-			// Allow the currently selected option and anything the user has access to
-			if ($nodeType == $dc->value || $user->hasAccess($nodeType, 'alpty'))
-			{
-			    if ($allowedNodeTypes && !in_array($nodeType, $allowedNodeTypes)) {
-			        continue;
-                }
-				$arrOptions[] = $nodeType;
-			}
+            if ($nodeType != $dc->value && $allowedNodeTypes && !in_array($nodeType, $allowedNodeTypes)) {
+                continue;
+            }
+
+            $arrOptions[] = $nodeType;
 		}
 
 		return $arrOptions;
@@ -258,7 +255,7 @@ class TreeContainer
     /**
 	 * Check permissions to edit table tl_page
 	 *
-	 * @throws Contao\CoreBundle\Exception\AccessDeniedException
+	 * @throws AccessDeniedException
 	 */
 	public function checkPermission(): void
 	{
@@ -273,6 +270,11 @@ class TreeContainer
 
             $GLOBALS['TL_DCA']['tl_tree']['config']['closed'] = true;
         }
+        // entferne den hinzufügen button
+        if ($user->hasAccess('createRoot', 'huh_treep')) {
+
+            $GLOBALS['TL_DCA']['tl_tree']['list']['sorting']['rootPaste'] = true;
+        }
 
         // Restrict the page tree
         if (empty($user->rootNodeMounts) || !is_array($user->rootNodeMounts))
@@ -286,18 +288,256 @@ class TreeContainer
 
         $GLOBALS['TL_DCA']['tl_tree']['list']['sorting']['root'] = $root;
 
-        switch (Input::get('act')) {
-            case 'create':
-            case 'select':
-                break;
-            case 'edit':
+        $session = $this->session->all();
+
+        // Set allowed page IDs (edit multiple)
+        if (is_array($session['CURRENT']['IDS']))
+        {
+            $edit_all = array();
+            $delete_all = array();
+
+            $stmt = $this->connection->prepare("SELECT id, pid, type FROM tl_tree WHERE id=? LIMIT 1");
+            foreach ($session['CURRENT']['IDS'] as $id)
+            {
+                $stmt->execute([$id]);
+                $objPage = $stmt->fetch(FetchMode::STANDARD_OBJECT);
 
 
+//                $objPage = $this->Database->prepare("SELECT id, pid, type, includeChmod, chmod, cuser, cgroup FROM tl_page WHERE id=?")
+//                    ->limit(1)
+//                    ->execute($id);
+
+//                if ($objPage->numRows < 1 || !$user->hasAccess($objPage->type, 'alpty'))
+                if (!$objPage)
+                {
+                    continue;
+                }
+
+                if ($this->hasAccess($user, (int) $objPage->id, $root))
+                {
+                    $edit_all[] = $id;
+                }
+
+                if ($objPage->pid === 0) {
+                    if ($user->hasAccess('deleteRoot', 'huh_treep')){
+                        $delete_all[] = $id;
+                    }
+                } else {
+                    if ($user->hasAccess('delete', 'huh_treep')) {
+                        $delete_all[] = $id;
+                    }
+                }
+            }
+
+            $session['CURRENT']['IDS'] = (Input::get('act') == 'deleteAll') ? $delete_all : $edit_all;
         }
+
+        // Set allowed clipboard IDs
+        if (isset($session['CLIPBOARD']['tl_tree']) && is_array($session['CLIPBOARD']['tl_tree']['id']))
+        {
+            $clipboard = array();
+
+            $stmt = $this->connection->prepare('SELECT id, pid, type FROM tl_tree WHERE id=? LIMIT 1');
+            foreach ($session['CLIPBOARD']['tl_tree']['id'] as $id)
+            {
+                $stmt->execute([$id]);
+                $objPage = $stmt->fetch(FetchMode::STANDARD_OBJECT);
+
+//                $objPage = $this->Database->prepare("SELECT id, pid, type, includeChmod, chmod, cuser, cgroup FROM tl_page WHERE id=?")
+//                    ->limit(1)
+//                    ->execute($id);
+
+                if (!$objPage)
+                {
+                    continue;
+                }
+
+//                if ($objPage->numRows < 1 || !$this->User->hasAccess($objPage->type, 'alpty'))
+//                {
+//                    continue;
+//                }
+
+                if ($this->hasAccess($user, (int) $objPage->id, $root))
+                {
+                    $clipboard[] = $id;
+                }
+            }
+
+            $session['CLIPBOARD']['tl_tree']['id'] = $clipboard;
+        }
+
+        // Overwrite session
+        $this->session->replace($session);
+
+        // Check permissions to save and create new
+//        if (Input::get('act') == 'edit')
+//        {
+//            $objPage = $this->Database->prepare("SELECT * FROM tl_page WHERE id=(SELECT pid FROM tl_page WHERE id=?)")
+//                ->limit(1)
+//                ->execute(Input::get('id'));
+//
+//            if ($objPage->numRows && !$this->User->isAllowed(BackendUser::CAN_EDIT_PAGE_HIERARCHY, $objPage->row()))
+//            {
+//                $GLOBALS['TL_DCA']['tl_page']['config']['closed'] = true;
+//            }
+//        }
+
+        // Check current action
+//        if (Input::get('act') && Input::get('act') != 'paste')
+//        {
+//            $permission = 0;
+//            $cid = CURRENT_ID ?: Input::get('id');
+//            $ids = ($cid != '') ? array($cid) : array();
+//
+//            // Set permission
+//            switch (Input::get('act'))
+//            {
+//                case 'edit':
+//                case 'toggle':
+//                    $permission = BackendUser::CAN_EDIT_PAGE;
+//                    break;
+//
+//                case 'move':
+//                    $permission = BackendUser::CAN_EDIT_PAGE_HIERARCHY;
+//                    $ids[] = Input::get('sid');
+//                    break;
+//
+//                case 'create':
+//                case 'copy':
+//                case 'copyAll':
+//                case 'cut':
+//                case 'cutAll':
+//                    $permission = BackendUser::CAN_EDIT_PAGE_HIERARCHY;
+//
+//                    // Check the parent page in "paste into" mode
+//                    if (Input::get('mode') == 2)
+//                    {
+//                        $ids[] = Input::get('pid');
+//                    }
+//                    // Check the parent's parent page in "paste after" mode
+//                    else
+//                    {
+//                        $stmt = $this->connection->prepare('SELECT pid FROM tl_tree WHERE id=?');
+//                        $stmt->execute([Input::get('pid')]);
+//                        $node = $stmt->fetch(FetchMode::STANDARD_OBJECT);
+//                        $ids[] = $node->pid;
+//                    }
+//                    break;
+//
+//                case 'delete':
+//                    $permission = BackendUser::CAN_DELETE_PAGE;
+//                    break;
+//            }
+//
+//            // Check user permissions
+//            $nodeMounts = array();
+//
+//            // Get all allowed pages for the current user
+//            foreach ($user->rootNodeMounts as $root)
+//            {
+//                if (Input::get('act') != 'delete')
+//                {
+//                    $nodeMounts[] = $root;
+//                }
+//
+//                $nodeMounts = array_merge($nodeMounts, Database::getInstance()->getChildRecords($root, 'tl_tree'));
+//            }
+//
+//            $error = false;
+//            $nodeMounts = array_unique($nodeMounts);
+//
+//            // Do not allow to paste after pages on the root level (pagemounts)
+//            if ((Input::get('act') == 'cut' || Input::get('act') == 'cutAll') && Input::get('mode') == 1 && in_array(Input::get('pid'), $this->eliminateNestedPages($this->User->pagemounts)))
+//            {
+//                throw new Contao\CoreBundle\Exception\AccessDeniedException('Not enough permissions to paste page ID ' . Input::get('id') . ' after mounted page ID ' . Input::get('pid') . ' (root level).');
+//            }
+//
+//            // Check each page
+//            foreach ($ids as $i=>$id)
+//            {
+//                if (!in_array($id, $nodeMounts))
+//                {
+//                    $this->log('Page ID ' . $id . ' was not mounted', __METHOD__, TL_ERROR);
+//
+//                    $error = true;
+//                    break;
+//                }
+//
+//                // Get the page object
+//                $objPage = $this->Database->prepare("SELECT * FROM tl_page WHERE id=?")
+//                    ->limit(1)
+//                    ->execute($id);
+//
+//                if ($objPage->numRows < 1)
+//                {
+//                    continue;
+//                }
+//
+//                // Check whether the current user is allowed to access the current page
+//                if (Input::get('act') != 'show' && !$this->User->isAllowed($permission, $objPage->row()))
+//                {
+//                    $error = true;
+//                    break;
+//                }
+//
+//                // Check the type of the first page (not the following parent pages)
+//                // In "edit multiple" mode, $ids contains only the parent ID, therefore check $id != $_GET['pid'] (see #5620)
+//                if ($i == 0 && $id != Input::get('pid') && Input::get('act') != 'create' && !$this->User->hasAccess($objPage->type, 'alpty'))
+//                {
+//                    $this->log('Not enough permissions to  ' . Input::get('act') . ' ' . $objPage->type . ' pages', __METHOD__, TL_ERROR);
+//
+//                    $error = true;
+//                    break;
+//                }
+//            }
+//
+//            // Redirect if there is an error
+//            if ($error)
+//            {
+//                throw new Contao\CoreBundle\Exception\AccessDeniedException('Not enough permissions to ' . Input::get('act') . ' page ID ' . $cid . ' or paste after/into page ID ' . Input::get('pid') . '.');
+//            }
+//        }
 
         return;
 
-		$session = $this->session->all();
+
+
+
+        if (Input::get('act') && Input::get('act') != 'paste')
+        {
+            if (Input::get('act') == 'create')
+            {
+                $currentNode = TreeModel::findByPk(Input::get('pid'));
+
+            } else
+            {
+                $currentNode = TreeModel::findByPk(Input::get('id'));
+            }
+            if (!$currentNode)
+            {
+                throw new AccessDeniedException(ucfirst(Input::get('act')) . ' is not possible here.');
+            }
+            $rootNode = $currentNode;
+            if (!$currentNode->isRootNode())
+            {
+                $rootNode = $currentNode->getRootNode();
+            }
+
+            switch (Input::get('act'))
+            {
+                case 'select':
+                    break;
+                case 'create':
+                case 'edit':
+                case 'toggle':
+                    if (!in_array($rootNode->id, $root))
+                    {
+                        throw new AccessDeniedException('Not enough permissions to ' . Input::get('act') . ' tree element ID ' . $currentNode->id . ' or paste after/into page ID ' . Input::get('pid') . '.');
+                    }
+            }
+        }
+
+        return;
 
 
 
@@ -427,21 +667,21 @@ class TreeContainer
 			}
 
 			// Check user permissions
-			$pagemounts = array();
+			$nodeMounts = array();
 
 			// Get all allowed pages for the current user
 			foreach ($this->User->pagemounts as $root)
 			{
 				if (Input::get('act') != 'delete')
 				{
-					$pagemounts[] = $root;
+					$nodeMounts[] = $root;
 				}
 
-				$pagemounts = array_merge($pagemounts, $this->Database->getChildRecords($root, 'tl_page'));
+				$nodeMounts = array_merge($nodeMounts, $this->Database->getChildRecords($root, 'tl_page'));
 			}
 
 			$error = false;
-			$pagemounts = array_unique($pagemounts);
+			$nodeMounts = array_unique($nodeMounts);
 
 			// Do not allow to paste after pages on the root level (pagemounts)
 			if ((Input::get('act') == 'cut' || Input::get('act') == 'cutAll') && Input::get('mode') == 1 && in_array(Input::get('pid'), $this->eliminateNestedPages($this->User->pagemounts)))
@@ -452,7 +692,7 @@ class TreeContainer
 			// Check each page
 			foreach ($ids as $i=>$id)
 			{
-				if (!in_array($id, $pagemounts))
+				if (!in_array($id, $nodeMounts))
 				{
 					$this->log('Page ID ' . $id . ' was not mounted', __METHOD__, TL_ERROR);
 
@@ -495,4 +735,33 @@ class TreeContainer
 			}
 		}
 	}
+
+    /**
+     * Return if user has access to the current node
+     *
+     * @param BackendUser $user
+     * @param TreeModel|int $currentNode
+     * @param array $root
+     * @return bool
+     */
+	public function hasAccess($user, $currentNode, $root): bool
+    {
+        if (is_int($currentNode)) {
+            $currentNode = TreeModel::findByPk($currentNode);
+        }
+        if (!$currentNode instanceof TreeModel) {
+            return false;
+        }
+        $rootNode = $currentNode;
+        if (!$currentNode->isRootNode())
+        {
+            $rootNode = $currentNode->getRootNode();
+        }
+
+        if (in_array($rootNode->id, $root))
+        {
+            return true;
+        }
+        return false;
+    }
 }

@@ -15,10 +15,10 @@ $GLOBALS['TL_DCA']['tl_tree'] = array
 //			array('tl_page', 'makeRedirectPageMandatory'),
 //			array('tl_page', 'generateSitemap')
 		),
-//		'oncut_callback' => array
-//		(
-//			array('tl_page', 'scheduleUpdate')
-//		),
+		'oncut_callback' => array
+		(
+//			array(\HeimrichHannot\TreeBundle\EventListener\DataContainer\TreeContainer::class, 'scheduleUpdate')
+		),
 //		'ondelete_callback' => array
 //		(
 //			array('tl_page', 'purgeSearchIndex'),
@@ -140,12 +140,13 @@ $GLOBALS['TL_DCA']['tl_tree'] = array
 //		)
 //	),
 
-	// Palettes
-	'palettes' => array
-	(
-		'__selector__'                => array('type'),
-		'default'                     => '{title_legend},title,alias,type;{content_legend},description;',
-	),
+    // Palettes
+    'palettes' => array
+    (
+        '__selector__' => array('type'),
+        'default'      => \HeimrichHannot\TreeBundle\EventListener\DataContainer\TreeContainer::PREPEND_PALETTE
+            . '{content_legend},description;',
+    ),
 
 	// Subpalettes
 	'subpalettes' => array
@@ -376,34 +377,6 @@ $GLOBALS['TL_DCA']['tl_tree'] = array
 //
 //		$objSession->set('sitemap_updater', null);
 //	}
-//
-//	/**
-//	 * Schedule a sitemap update
-//	 *
-//	 * This method is triggered when a single page or multiple pages are
-//	 * modified (edit/editAll), moved (cut/cutAll) or deleted
-//	 * (delete/deleteAll). Since duplicated pages are unpublished by default,
-//	 * it is not necessary to schedule updates on copyAll as well.
-//	 *
-//	 * @param DataContainer $dc
-//	 */
-//	public function scheduleUpdate(DataContainer $dc)
-//	{
-//		// Return if there is no ID
-//		if (!$dc->activeRecord || !$dc->activeRecord->id || Input::get('act') == 'copy')
-//		{
-//			return;
-//		}
-//
-//		/** @var Symfony\Component\HttpFoundation\Session\SessionInterface $objSession */
-//		$objSession = System::getContainer()->get('session');
-//
-//		// Store the ID in the session
-//		$session = $objSession->get('sitemap_updater');
-//		$session[] = PageModel::findWithDetails($dc->activeRecord->id)->rootId;
-//		$objSession->set('sitemap_updater', array_unique($session));
-//	}
-//
 //
 //	/**
 //	 * Automatically create an article in the main column of a new page

@@ -14,6 +14,7 @@ namespace HeimrichHannot\TreeBundle\Model;
 
 use Contao\Model;
 use Contao\Model\Collection;
+use Contao\PageModel;
 
 /**
  * Class TreeModel
@@ -44,5 +45,41 @@ class TreeModel extends Model
     public function isRootNode(): bool
     {
         return $this->pid == 0;
+    }
+
+    public function getRootNode(): ?TreeModel
+    {
+        foreach (static::findParentsById($this->id) as $parent) {
+            if ($parent->pid > 0) {
+                continue;
+            }
+            return $parent;
+        }
+        return null;
+    }
+
+    /**
+     * Find the parent pages of a page
+     *
+     * @param integer $intId The page's ID
+     *
+     * @return Collection|TreeModel[]|TreeModel|null A collection of models or null if there are no parent pages
+     */
+    public static function findParentsById($intId)
+    {
+        $arrModels = array();
+
+        while ($intId > 0 && ($objPage = static::findByPk($intId)) !== null)
+        {
+            $intId = $objPage->pid;
+            $arrModels[] = $objPage;
+        }
+
+        if (empty($arrModels))
+        {
+            return null;
+        }
+
+        return static::createCollection($arrModels, 'tl_tree');
     }
 }
