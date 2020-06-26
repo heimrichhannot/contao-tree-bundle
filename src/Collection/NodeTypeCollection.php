@@ -12,12 +12,12 @@
 namespace HeimrichHannot\TreeBundle\Collection;
 
 
-use HeimrichHannot\TreeBundle\TreeNode\TreeNodeInterface;
+use HeimrichHannot\TreeBundle\TreeNode\AbstractTreeNode;
 
 class NodeTypeCollection
 {
     /**
-     * @var iterable<TreeNodeInterface>
+     * @var iterable<AbstractTreeNode>
      */
     protected $nodeTypesIterable;
     /**
@@ -42,16 +42,16 @@ class NodeTypeCollection
     /**
      * Add a tree node type.
      *
-     * @param TreeNodeInterface $nodeType
+     * @param AbstractTreeNode $nodeType
      */
-    public function addNodeType(TreeNodeInterface $nodeType)
+    public function addNodeType(AbstractTreeNode $nodeType)
     {
         if (isset($this->rootNodeTypes[$nodeType::getType()]))
         {
             trigger_error("Duplicate node type.", E_USER_WARNING);
         }
         $this->nodeTypes[$nodeType::getType()] = $nodeType;
-        if (!$nodeType::disallowRoot()) {
+        if (!$nodeType->disallowRoot()) {
             $this->rootNodeTypes[] = $nodeType::getType();
         }
     }
@@ -60,9 +60,9 @@ class NodeTypeCollection
      * Get tree node type by type
      *
      * @param string $type
-     * @return TreeNodeInterface|null
+     * @return AbstractTreeNode|null
      */
-    public function getNodeType(string $type): ?TreeNodeInterface
+    public function getNodeType(string $type): ?AbstractTreeNode
     {
         $this->createIndex();
         return $this->nodeTypes[$type] ?: null;
@@ -110,7 +110,7 @@ class NodeTypeCollection
         }
         $this->nodeTypes     = [];
         $this->rootNodeTypes = [];
-        /** @var TreeNodeInterface $nodeType */
+        /** @var AbstractTreeNode $nodeType */
         foreach ($this->nodeTypesIterable as $nodeType)
         {
             $this->addNodeType($nodeType);

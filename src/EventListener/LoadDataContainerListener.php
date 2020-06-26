@@ -13,8 +13,7 @@ namespace HeimrichHannot\TreeBundle\EventListener;
 
 
 use HeimrichHannot\TreeBundle\Collection\NodeTypeCollection;
-use HeimrichHannot\TreeBundle\EventListener\DataContainer\TreeContainer;
-use HeimrichHannot\TreeBundle\TreeNode\TreeNodeInterface;
+use HeimrichHannot\TreeBundle\TreeNode\AbstractTreeNode;
 
 class LoadDataContainerListener
 {
@@ -34,15 +33,17 @@ class LoadDataContainerListener
 
     public function __invoke(string $table)
     {
-        if ('tl_tree' !== $table) {
+        if ('tl_tree' !== $table)
+        {
             return;
         }
 
         $dca = &$GLOBALS['TL_DCA']['tl_tree'];
 
-        /** @var TreeNodeInterface $nodeType */
-        foreach ($this->nodeTypeCollection->getNodeTypes() as $nodeType) {
-            $dca['palettes'][$nodeType::getType()] = TreeContainer::PREPEND_PALETTE.$nodeType::getPalette();
+        /** @var AbstractTreeNode $nodeType */
+        foreach ($this->nodeTypeCollection->getNodeTypes() as $nodeType)
+        {
+            $dca['palettes'][$nodeType::getType()] = $nodeType->generatePalette();
         }
     }
 }

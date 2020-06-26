@@ -17,14 +17,17 @@ namespace HeimrichHannot\TreeBundle\TreeNode;
  *
  * @package HeimrichHannot\TreeBundle\TreeNode
  */
-interface TreeNodeInterface
+abstract class AbstractTreeNode
 {
+    const PREPEND_PALETTE = '{type_legend},title,alias,type;';
+    const APPEND_PALETTE = '{publish_legend},published,start,stop;';
+
     /**
      * Return a unique node type.
      *
      * @return string
      */
-    public static function getType(): string;
+    abstract public static function getType(): string;
 
     /**
      * Return the node palette including legends.
@@ -33,7 +36,7 @@ interface TreeNodeInterface
      *
      * @return string
      */
-    public static function getPalette(): string;
+    abstract protected function getPalette(): string;
 
     /**
      * Return a list of node types that are allowed to be childs of this node.
@@ -41,12 +44,30 @@ interface TreeNodeInterface
      *
      * @return array|null
      */
-    public static function allowedChilds(): ?array;
+    public function allowedChilds(): ?array
+    {
+        return null;
+    }
 
     /**
      * Return true if node type is not allowed to be used as root.
      *
      * @return bool
      */
-    public static function disallowRoot(): bool;
+    public function disallowRoot(): bool
+    {
+        return false;
+    }
+
+    /**
+     * Return the node type palette
+     *
+     * @param string $prependPalette
+     * @param string $appendPalette
+     * @return string
+     */
+    public function generatePalette(string $prependPalette = self::PREPEND_PALETTE, string $appendPalette = self::APPEND_PALETTE): string
+    {
+        return $prependPalette.$this->getPalette().$appendPalette;
+    }
 }

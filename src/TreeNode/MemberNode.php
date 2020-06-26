@@ -12,7 +12,7 @@
 namespace HeimrichHannot\TreeBundle\TreeNode;
 
 
-class MemberNode implements TreeNodeInterface
+class MemberNode extends AbstractTreeNode
 {
 
     public static function getType(): string
@@ -20,18 +20,8 @@ class MemberNode implements TreeNodeInterface
         return 'member_node';
     }
 
-    public static function getPalette(): string
+    protected function getPalette(): string
     {
         return '{content_legend},member,description;';
-    }
-
-    public static function allowedChilds(): ?array
-    {
-        return null;
-    }
-
-    public static function disallowRoot(): bool
-    {
-        return false;
     }
 }

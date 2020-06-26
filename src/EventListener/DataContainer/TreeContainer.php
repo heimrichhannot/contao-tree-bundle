@@ -19,6 +19,8 @@ use Contao\DataContainer;
 use Contao\Image;
 use Contao\Input;
 use Contao\StringUtil;
+use Contao\System;
+use Contao\Versions;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\FetchMode;
 use Exception;
@@ -30,6 +32,7 @@ use Symfony\Component\HttpFoundation\Session\SessionInterface;
 class TreeContainer
 {
     const PREPEND_PALETTE = '{type_legend},title,alias,type;';
+    const APPEND_PALETTE = '{publish_legend},published,start,stop;';
 
     /**
      * @var Connection
@@ -397,11 +400,11 @@ class TreeContainer
             {
                 case 'edit':
                 case 'toggle':
-                    $permission = BackendUser::CAN_EDIT_PAGE;
+//                    $permission = BackendUser::CAN_EDIT_PAGE;
                     break;
 
                 case 'move':
-                    $permission = BackendUser::CAN_EDIT_PAGE_HIERARCHY;
+//                    $permission = BackendUser::CAN_EDIT_PAGE_HIERARCHY;
                     $ids[] = Input::get('sid');
                     break;
 
@@ -494,7 +497,7 @@ class TreeContainer
                 // Check the type of the first page (not the following parent pages)
                 // In "edit multiple" mode, $ids contains only the parent ID, therefore check $id != $_GET['pid'] (see #5620)
 //                if ($i == 0 && $id != Input::get('pid') && Input::get('act') != 'create' && !$user->hasAccess($nodeData->type, 'alpty'))
-                if ($i == 0 && $id != Input::get('pid') && Input::get('act') != 'create' && $this->hasAccess($nodeData->id, $user, $root))
+                if ($i == 0 && $id != Input::get('pid') && Input::get('act') != 'create' && !$this->hasAccess($nodeData->id, $user, $root))
                 {
 //                    $this->log('Not enough permissions to  ' . Input::get('act') . ' ' . $nodeData->type . ' pages', __METHOD__, TL_ERROR);
 
@@ -770,5 +773,160 @@ class TreeContainer
 
 //		return ($this->User->hasAccess($row['type'], 'alpty') && $this->User->isAllowed(BackendUser::CAN_DELETE_PAGE, $row) && ($this->User->isAdmin || !in_array($row['id'], $root))) ? '<a href="' . $this->addToUrl($href . '&amp;id=' . $row['id']) . '" title="' . StringUtil::specialchars($title) . '"' . $attributes . '>' . Image::getHtml($icon, $label) . '</a> ' : Image::getHtml(preg_replace('/\.svg$/i', '_.svg', $icon)) . ' ';
 		return (($row['pid'] == 0 && $user->hasAccess('deleteRoot', 'huh_treep')) || ($row['pid'] != 0 && $user->hasAccess('delete', 'huh_treep'))) ? '<a href="' . Backend::addToUrl($href . '&amp;id=' . $row['id']) . '" title="' . StringUtil::specialchars($title) . '"' . $attributes . '>' . Image::getHtml($icon, $label) . '</a> ' : Image::getHtml(preg_replace('/\.svg$/i', '_.svg', $icon)) . ' ';
+	}
+
+	/**
+	 * Return the "toggle visibility" button
+	 *
+	 * @param array  $row
+	 * @param string $href
+	 * @param string $label
+	 * @param string $title
+	 * @param string $icon
+	 * @param string $attributes
+	 *
+	 * @return string
+	 */
+	public function onToggleButtonCallback($row, $href, $label, $title, $icon, $attributes): string
+	{
+		if (strlen(Input::get('tid')))
+		{
+			$this->toggleVisibility(Input::get('tid'), (Input::get('state') == 1), (@func_get_arg(12) ?: null));
+			Backend::redirect(Backend::getReferer());
+		}
+
+		$user = BackendUser::getInstance();
+
+		// Check permissions AFTER checking the tid, so hacking attempts are logged
+		if (!$user->hasAccess('tl_tree::published', 'alexf'))
+		{
+			return '';
+		}
+
+		$href .= '&amp;tid=' . $row['id'] . '&amp;state=' . ($row['published'] ? '' : 1);
+
+		if (!$row['published'])
+		{
+			$icon = 'invisible.svg';
+		}
+
+//		$stmt = $this->connection->prepare("SELECT * FROM tl_page WHERE id=? LIMIT 1");
+//		$stmt->execute([$row['id']]);
+//		$objPage = $stmt->fetch(FetchMode::ASSOCIATIVE);
+//
+//		if (!$this->User->hasAccess($row['type'], 'alpty') || !$this->User->isAllowed(BackendUser::CAN_EDIT_PAGE, $objPage->row()))
+        if (!$this->hasAccess($row['id'], $user))
+		{
+			return Image::getHtml($icon) . ' ';
+		}
+
+		return '<a href="' . Backend::addToUrl($href) . '" title="' . StringUtil::specialchars($title) . '"' . $attributes . '>' . Image::getHtml($icon, $label, 'data-state="' . ($row['published'] ? 1 : 0) . '"') . '</a> ';
+	}
+
+	/**
+	 * Disable/enable a user group
+	 *
+	 * @param integer       $intId
+	 * @param boolean       $blnVisible
+	 * @param DataContainer $dc
+	 *
+	 * @throws AccessDeniedException
+	 */
+	public function toggleVisibility($intId, $blnVisible, DataContainer $dc=null)
+	{
+		// Set the ID and action
+		Input::setGet('id', $intId);
+		Input::setGet('act', 'toggle');
+
+		if ($dc)
+		{
+			$dc->id = $intId; // see #8043
+		}
+
+		// Trigger the onload_callback
+		if (is_array($GLOBALS['TL_DCA']['tl_tree']['config']['onload_callback']))
+		{
+			foreach ($GLOBALS['TL_DCA']['tl_tree']['config']['onload_callback'] as $callback)
+			{
+				if (is_array($callback))
+				{
+					System::importStatic($callback[0])->{$callback[1]}($dc);
+				}
+				elseif (is_callable($callback))
+				{
+					$callback($dc);
+				}
+			}
+		}
+
+        $user = BackendUser::getInstance();
+
+		// Check the field access
+		if (!$user->hasAccess('tl_tree::published', 'alexf'))
+		{
+			throw new AccessDeniedException('Not enough permissions to publish/unpublish tree element ID ' . $intId . '.');
+		}
+
+		// Set the current record
+		if ($dc)
+		{
+		    $stmt = $this->connection->prepare("SELECT * FROM tl_tree WHERE id=? LIMIT 1");
+		    $stmt->execute([$intId]);
+		    $objRow = $stmt->fetch(FetchMode::STANDARD_OBJECT);
+
+			if ($objRow)
+			{
+				$dc->activeRecord = $objRow;
+			}
+		}
+
+		$objVersions = new Versions('tl_tree', $intId);
+		$objVersions->initialize();
+
+		// Trigger the save_callback
+		if (is_array($GLOBALS['TL_DCA']['tl_tree']['fields']['published']['save_callback']))
+		{
+			foreach ($GLOBALS['TL_DCA']['tl_tree']['fields']['published']['save_callback'] as $callback)
+			{
+				if (is_array($callback))
+				{
+                    $blnVisible = System::importStatic($callback[0])->{$callback[1]}($blnVisible, $dc);
+				}
+				elseif (is_callable($callback))
+				{
+					$blnVisible = $callback($blnVisible, $dc);
+				}
+			}
+		}
+
+		$time = time();
+
+		// Update the database
+        $stmt = $this->connection->prepare("UPDATE tl_tree SET tstamp=$time, published='" . ($blnVisible ? '1' : '') . "' WHERE id=?");
+        $stmt->execute([$intId]);
+
+		if ($dc)
+		{
+			$dc->activeRecord->tstamp = $time;
+			$dc->activeRecord->published = ($blnVisible ? '1' : '');
+		}
+
+		// Trigger the onsubmit_callback
+		if (is_array($GLOBALS['TL_DCA']['tl_tree']['config']['onsubmit_callback']))
+		{
+			foreach ($GLOBALS['TL_DCA']['tl_tree']['config']['onsubmit_callback'] as $callback)
+			{
+				if (is_array($callback))
+				{
+					System::importStatic($callback[0])->{$callback[1]}($dc);
+				}
+				elseif (is_callable($callback))
+				{
+					$callback($dc);
+				}
+			}
+		}
+
+		$objVersions->create();
 	}
 }

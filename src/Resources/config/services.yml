@@ -2,10 +2,6 @@ services:
   _defaults:
     autowire: true
 
-  _instanceof:
-    HeimrichHannot\TreeBundle\TreeNode\TreeNodeInterface:
-      tags: ['huh.tree.node_type']
-
   HeimrichHannot\TreeBundle\EventListener\:
     resource: '../../EventListener/*'
     public: true
