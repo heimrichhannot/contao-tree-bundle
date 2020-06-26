@@ -16,12 +16,14 @@ use Contao\BackendUser;
 use Contao\CoreBundle\Exception\AccessDeniedException;
 use Contao\Database;
 use Contao\DataContainer;
+use Contao\Image;
 use Contao\Input;
 use Contao\StringUtil;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\FetchMode;
 use Exception;
 use HeimrichHannot\TreeBundle\Collection\NodeTypeCollection;
+use HeimrichHannot\TreeBundle\Contao\Backend;
 use HeimrichHannot\TreeBundle\Model\TreeModel;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
 
@@ -54,6 +56,7 @@ class TreeContainer
      */
     public function onLoadCallback(DataContainer $dc)
     {
+        $this->addBreadcrumb();
         $this->checkPermission();
         $node = TreeModel::findByPk($dc->id);
         if (0 == $node->pid) {
@@ -300,7 +303,7 @@ class TreeContainer
             foreach ($session['CURRENT']['IDS'] as $id)
             {
                 $stmt->execute([$id]);
-                $objPage = $stmt->fetch(FetchMode::STANDARD_OBJECT);
+                $nodeData = $stmt->fetch(FetchMode::STANDARD_OBJECT);
 
 
 //                $objPage = $this->Database->prepare("SELECT id, pid, type, includeChmod, chmod, cuser, cgroup FROM tl_page WHERE id=?")
@@ -308,17 +311,17 @@ class TreeContainer
 //                    ->execute($id);
 
 //                if ($objPage->numRows < 1 || !$user->hasAccess($objPage->type, 'alpty'))
-                if (!$objPage)
+                if (!$nodeData)
                 {
                     continue;
                 }
 
-                if ($this->hasAccess($user, (int) $objPage->id, $root))
+                if ($this->hasAccess((int)$nodeData->id, $user, $root))
                 {
                     $edit_all[] = $id;
                 }
 
-                if ($objPage->pid === 0) {
+                if ($nodeData->pid === 0) {
                     if ($user->hasAccess('deleteRoot', 'huh_treep')){
                         $delete_all[] = $id;
                     }
@@ -341,13 +344,13 @@ class TreeContainer
             foreach ($session['CLIPBOARD']['tl_tree']['id'] as $id)
             {
                 $stmt->execute([$id]);
-                $objPage = $stmt->fetch(FetchMode::STANDARD_OBJECT);
+                $nodeData = $stmt->fetch(FetchMode::STANDARD_OBJECT);
 
 //                $objPage = $this->Database->prepare("SELECT id, pid, type, includeChmod, chmod, cuser, cgroup FROM tl_page WHERE id=?")
 //                    ->limit(1)
 //                    ->execute($id);
 
-                if (!$objPage)
+                if (!$nodeData)
                 {
                     continue;
                 }
@@ -357,7 +360,7 @@ class TreeContainer
 //                    continue;
 //                }
 
-                if ($this->hasAccess($user, (int) $objPage->id, $root))
+                if ($this->hasAccess((int)$nodeData->id, $user, $root))
                 {
                     $clipboard[] = $id;
                 }
@@ -383,370 +386,144 @@ class TreeContainer
 //        }
 
         // Check current action
-//        if (Input::get('act') && Input::get('act') != 'paste')
-//        {
-//            $permission = 0;
-//            $cid = CURRENT_ID ?: Input::get('id');
-//            $ids = ($cid != '') ? array($cid) : array();
-//
-//            // Set permission
-//            switch (Input::get('act'))
-//            {
-//                case 'edit':
-//                case 'toggle':
-//                    $permission = BackendUser::CAN_EDIT_PAGE;
-//                    break;
-//
-//                case 'move':
-//                    $permission = BackendUser::CAN_EDIT_PAGE_HIERARCHY;
-//                    $ids[] = Input::get('sid');
-//                    break;
-//
-//                case 'create':
-//                case 'copy':
-//                case 'copyAll':
-//                case 'cut':
-//                case 'cutAll':
-//                    $permission = BackendUser::CAN_EDIT_PAGE_HIERARCHY;
-//
-//                    // Check the parent page in "paste into" mode
-//                    if (Input::get('mode') == 2)
-//                    {
-//                        $ids[] = Input::get('pid');
-//                    }
-//                    // Check the parent's parent page in "paste after" mode
-//                    else
-//                    {
-//                        $stmt = $this->connection->prepare('SELECT pid FROM tl_tree WHERE id=?');
-//                        $stmt->execute([Input::get('pid')]);
-//                        $node = $stmt->fetch(FetchMode::STANDARD_OBJECT);
-//                        $ids[] = $node->pid;
-//                    }
-//                    break;
-//
-//                case 'delete':
-//                    $permission = BackendUser::CAN_DELETE_PAGE;
-//                    break;
-//            }
-//
-//            // Check user permissions
-//            $nodeMounts = array();
-//
-//            // Get all allowed pages for the current user
-//            foreach ($user->rootNodeMounts as $root)
-//            {
-//                if (Input::get('act') != 'delete')
-//                {
-//                    $nodeMounts[] = $root;
-//                }
-//
-//                $nodeMounts = array_merge($nodeMounts, Database::getInstance()->getChildRecords($root, 'tl_tree'));
-//            }
-//
-//            $error = false;
-//            $nodeMounts = array_unique($nodeMounts);
-//
-//            // Do not allow to paste after pages on the root level (pagemounts)
-//            if ((Input::get('act') == 'cut' || Input::get('act') == 'cutAll') && Input::get('mode') == 1 && in_array(Input::get('pid'), $this->eliminateNestedPages($this->User->pagemounts)))
-//            {
-//                throw new Contao\CoreBundle\Exception\AccessDeniedException('Not enough permissions to paste page ID ' . Input::get('id') . ' after mounted page ID ' . Input::get('pid') . ' (root level).');
-//            }
-//
-//            // Check each page
-//            foreach ($ids as $i=>$id)
-//            {
-//                if (!in_array($id, $nodeMounts))
-//                {
+        if (Input::get('act') && Input::get('act') != 'paste')
+        {
+            $permission = 0;
+            $cid = CURRENT_ID ?: Input::get('id');
+            $ids = ($cid != '') ? array($cid) : array();
+
+            // Set permission
+            switch (Input::get('act'))
+            {
+                case 'edit':
+                case 'toggle':
+                    $permission = BackendUser::CAN_EDIT_PAGE;
+                    break;
+
+                case 'move':
+                    $permission = BackendUser::CAN_EDIT_PAGE_HIERARCHY;
+                    $ids[] = Input::get('sid');
+                    break;
+
+                case 'create':
+                case 'copy':
+                case 'copyAll':
+                case 'cut':
+                case 'cutAll':
+                    $permission = BackendUser::CAN_EDIT_PAGE_HIERARCHY;
+
+                    // Check the parent page in "paste into" mode
+                    if (Input::get('mode') == 2)
+                    {
+                        $ids[] = Input::get('pid');
+                    }
+                    // Check the parent's parent page in "paste after" mode
+                    else
+                    {
+                        $stmt = $this->connection->prepare('SELECT pid FROM tl_tree WHERE id=?');
+                        $stmt->execute([Input::get('pid')]);
+                        $node = $stmt->fetch(FetchMode::STANDARD_OBJECT);
+                        $ids[] = $node->pid;
+                    }
+                    break;
+
+                case 'delete':
+                    $permission = BackendUser::CAN_DELETE_PAGE;
+                    break;
+            }
+
+            // Check user permissions
+            $nodeMounts = array();
+
+            // Get all allowed pages for the current user
+            foreach ($user->rootNodeMounts as $rootMount)
+            {
+                if (Input::get('act') != 'delete')
+                {
+                    $nodeMounts[] = $rootMount;
+                }
+
+                $nodeMounts = array_merge($nodeMounts, Database::getInstance()->getChildRecords($rootMount, 'tl_tree'));
+            }
+
+            $error = false;
+            $nodeMounts = array_unique($nodeMounts);
+
+            $contaoBackend = new Backend();
+
+            // Do not allow to paste after pages on the root level (pagemounts)
+            if (
+                (Input::get('act') == 'cut' || Input::get('act') == 'cutAll')
+                && Input::get('mode') == 1
+                && in_array(Input::get('pid'), $contaoBackend->eliminateNestedPages($user->rootNodeMounts, 'tl_tree')))
+            {
+                throw new AccessDeniedException('Not enough permissions to paste tree element ID ' . Input::get('id') . ' after mounted tree element ID ' . Input::get('pid') . ' (root level).');
+            }
+
+            $stmt = $this->connection->prepare("SELECT * FROM tl_tree WHERE id=? LIMIT 1");
+            // Check each tree node element
+            foreach ($ids as $i=>$id)
+            {
+                if (!in_array($id, $nodeMounts))
+                {
 //                    $this->log('Page ID ' . $id . ' was not mounted', __METHOD__, TL_ERROR);
-//
-//                    $error = true;
-//                    break;
-//                }
-//
-//                // Get the page object
+
+                    $error = true;
+                    break;
+                }
+
+                // Get the page object
+                $stmt->execute([$id]);
 //                $objPage = $this->Database->prepare("SELECT * FROM tl_page WHERE id=?")
 //                    ->limit(1)
 //                    ->execute($id);
-//
-//                if ($objPage->numRows < 1)
-//                {
-//                    continue;
-//                }
-//
-//                // Check whether the current user is allowed to access the current page
-//                if (Input::get('act') != 'show' && !$this->User->isAllowed($permission, $objPage->row()))
-//                {
-//                    $error = true;
-//                    break;
-//                }
-//
-//                // Check the type of the first page (not the following parent pages)
-//                // In "edit multiple" mode, $ids contains only the parent ID, therefore check $id != $_GET['pid'] (see #5620)
-//                if ($i == 0 && $id != Input::get('pid') && Input::get('act') != 'create' && !$this->User->hasAccess($objPage->type, 'alpty'))
-//                {
-//                    $this->log('Not enough permissions to  ' . Input::get('act') . ' ' . $objPage->type . ' pages', __METHOD__, TL_ERROR);
-//
-//                    $error = true;
-//                    break;
-//                }
-//            }
-//
-//            // Redirect if there is an error
-//            if ($error)
-//            {
-//                throw new Contao\CoreBundle\Exception\AccessDeniedException('Not enough permissions to ' . Input::get('act') . ' page ID ' . $cid . ' or paste after/into page ID ' . Input::get('pid') . '.');
-//            }
-//        }
+                $nodeData = $stmt->fetch(FetchMode::STANDARD_OBJECT);
+                if (!$nodeData)
+                {
+                    continue;
+                }
 
-        return;
-
-
-
-
-        if (Input::get('act') && Input::get('act') != 'paste')
-        {
-            if (Input::get('act') == 'create')
-            {
-                $currentNode = TreeModel::findByPk(Input::get('pid'));
-
-            } else
-            {
-                $currentNode = TreeModel::findByPk(Input::get('id'));
-            }
-            if (!$currentNode)
-            {
-                throw new AccessDeniedException(ucfirst(Input::get('act')) . ' is not possible here.');
-            }
-            $rootNode = $currentNode;
-            if (!$currentNode->isRootNode())
-            {
-                $rootNode = $currentNode->getRootNode();
-            }
-
-            switch (Input::get('act'))
-            {
-                case 'select':
+                // Check whether the current user is allowed to access the current page
+//                if (Input::get('act') != 'show' && !$this->User->isAllowed($permission, $nodeData->row()))
+                if (Input::get('act') != 'show' && !$this->hasAccess($nodeData->id, $user, $root))
+                {
+                    $error = true;
                     break;
-                case 'create':
-                case 'edit':
-                case 'toggle':
-                    if (!in_array($rootNode->id, $root))
-                    {
-                        throw new AccessDeniedException('Not enough permissions to ' . Input::get('act') . ' tree element ID ' . $currentNode->id . ' or paste after/into page ID ' . Input::get('pid') . '.');
-                    }
+                }
+
+                // Check the type of the first page (not the following parent pages)
+                // In "edit multiple" mode, $ids contains only the parent ID, therefore check $id != $_GET['pid'] (see #5620)
+//                if ($i == 0 && $id != Input::get('pid') && Input::get('act') != 'create' && !$user->hasAccess($nodeData->type, 'alpty'))
+                if ($i == 0 && $id != Input::get('pid') && Input::get('act') != 'create' && $this->hasAccess($nodeData->id, $user, $root))
+                {
+//                    $this->log('Not enough permissions to  ' . Input::get('act') . ' ' . $nodeData->type . ' pages', __METHOD__, TL_ERROR);
+
+                    $error = true;
+                    break;
+                }
+            }
+
+            // Redirect if there is an error
+            if ($error)
+            {
+                throw new AccessDeniedException('Not enough permissions to ' . Input::get('act') . ' tree node element with ID ' . $cid . ' or paste after/into tree node element with ID ' . Input::get('pid') . '.');
             }
         }
 
         return;
-
-
-
-		$GLOBALS['TL_DCA']['tl_tree']['list']['sorting']['root'] = $root;
-
-//		// Set allowed page IDs (edit multiple)
-//		if (is_array($session['CURRENT']['IDS']))
-//		{
-//			$edit_all = array();
-//			$delete_all = array();
-//
-//			foreach ($session['CURRENT']['IDS'] as $id)
-//			{
-//				$objPage = $this->Database->prepare("SELECT id, pid, type, includeChmod, chmod, cuser, cgroup FROM tl_page WHERE id=?")
-//										  ->limit(1)
-//										  ->execute($id);
-//
-//				if ($objPage->numRows < 1 || !$this->User->hasAccess($objPage->type, 'alpty'))
-//				{
-//					continue;
-//				}
-//
-//				$row = $objPage->row();
-//
-//				if ($this->User->isAllowed(BackendUser::CAN_EDIT_PAGE, $row))
-//				{
-//					$edit_all[] = $id;
-//				}
-//
-//				// Mounted pages cannot be deleted
-//				if ($this->User->isAllowed(BackendUser::CAN_DELETE_PAGE, $row) && !$this->User->hasAccess($id, 'pagemounts'))
-//				{
-//					$delete_all[] = $id;
-//				}
-//			}
-//
-//			$session['CURRENT']['IDS'] = (Input::get('act') == 'deleteAll') ? $delete_all : $edit_all;
-//		}
-//
-//		// Set allowed clipboard IDs
-//		if (isset($session['CLIPBOARD']['tl_page']) && is_array($session['CLIPBOARD']['tl_page']['id']))
-//		{
-//			$clipboard = array();
-//
-//			foreach ($session['CLIPBOARD']['tl_page']['id'] as $id)
-//			{
-//				$objPage = $this->Database->prepare("SELECT id, pid, type, includeChmod, chmod, cuser, cgroup FROM tl_page WHERE id=?")
-//										  ->limit(1)
-//										  ->execute($id);
-//
-//				if ($objPage->numRows < 1 || !$this->User->hasAccess($objPage->type, 'alpty'))
-//				{
-//					continue;
-//				}
-//
-//				if ($this->User->isAllowed(BackendUser::CAN_EDIT_PAGE_HIERARCHY, $objPage->row()))
-//				{
-//					$clipboard[] = $id;
-//				}
-//			}
-//
-//			$session['CLIPBOARD']['tl_page']['id'] = $clipboard;
-//		}
-
-		// Overwrite session
-//		$objSession->replace($session);
-
-		// Check permissions to save and create new
-		if (Input::get('act') == 'edit')
-		{
-			$objPage = $this->Database->prepare("SELECT * FROM tl_page WHERE id=(SELECT pid FROM tl_page WHERE id=?)")
-									  ->limit(1)
-									  ->execute(Input::get('id'));
-
-			if ($objPage->numRows && !$this->User->isAllowed(BackendUser::CAN_EDIT_PAGE_HIERARCHY, $objPage->row()))
-			{
-				$GLOBALS['TL_DCA']['tl_page']['config']['closed'] = true;
-			}
-		}
-
-		// Check current action
-		if (Input::get('act') && Input::get('act') != 'paste')
-		{
-			$permission = 0;
-			$cid = CURRENT_ID ?: Input::get('id');
-			$ids = ($cid != '') ? array($cid) : array();
-
-			// Set permission
-			switch (Input::get('act'))
-			{
-				case 'edit':
-				case 'toggle':
-					$permission = BackendUser::CAN_EDIT_PAGE;
-					break;
-
-				case 'move':
-					$permission = BackendUser::CAN_EDIT_PAGE_HIERARCHY;
-					$ids[] = Input::get('sid');
-					break;
-
-				case 'create':
-				case 'copy':
-				case 'copyAll':
-				case 'cut':
-				case 'cutAll':
-					$permission = BackendUser::CAN_EDIT_PAGE_HIERARCHY;
-
-					// Check the parent page in "paste into" mode
-					if (Input::get('mode') == 2)
-					{
-						$ids[] = Input::get('pid');
-					}
-					// Check the parent's parent page in "paste after" mode
-					else
-					{
-						$objPage = $this->Database->prepare("SELECT pid FROM tl_page WHERE id=?")
-												  ->limit(1)
-												  ->execute(Input::get('pid'));
-
-						$ids[] = $objPage->pid;
-					}
-					break;
-
-				case 'delete':
-					$permission = BackendUser::CAN_DELETE_PAGE;
-					break;
-			}
-
-			// Check user permissions
-			$nodeMounts = array();
-
-			// Get all allowed pages for the current user
-			foreach ($this->User->pagemounts as $root)
-			{
-				if (Input::get('act') != 'delete')
-				{
-					$nodeMounts[] = $root;
-				}
-
-				$nodeMounts = array_merge($nodeMounts, $this->Database->getChildRecords($root, 'tl_page'));
-			}
-
-			$error = false;
-			$nodeMounts = array_unique($nodeMounts);
-
-			// Do not allow to paste after pages on the root level (pagemounts)
-			if ((Input::get('act') == 'cut' || Input::get('act') == 'cutAll') && Input::get('mode') == 1 && in_array(Input::get('pid'), $this->eliminateNestedPages($this->User->pagemounts)))
-			{
-				throw new Contao\CoreBundle\Exception\AccessDeniedException('Not enough permissions to paste page ID ' . Input::get('id') . ' after mounted page ID ' . Input::get('pid') . ' (root level).');
-			}
-
-			// Check each page
-			foreach ($ids as $i=>$id)
-			{
-				if (!in_array($id, $nodeMounts))
-				{
-					$this->log('Page ID ' . $id . ' was not mounted', __METHOD__, TL_ERROR);
-
-					$error = true;
-					break;
-				}
-
-				// Get the page object
-				$objPage = $this->Database->prepare("SELECT * FROM tl_page WHERE id=?")
-										  ->limit(1)
-										  ->execute($id);
-
-				if ($objPage->numRows < 1)
-				{
-					continue;
-				}
-
-				// Check whether the current user is allowed to access the current page
-				if (Input::get('act') != 'show' && !$this->User->isAllowed($permission, $objPage->row()))
-				{
-					$error = true;
-					break;
-				}
-
-				// Check the type of the first page (not the following parent pages)
-				// In "edit multiple" mode, $ids contains only the parent ID, therefore check $id != $_GET['pid'] (see #5620)
-				if ($i == 0 && $id != Input::get('pid') && Input::get('act') != 'create' && !$this->User->hasAccess($objPage->type, 'alpty'))
-				{
-					$this->log('Not enough permissions to  ' . Input::get('act') . ' ' . $objPage->type . ' pages', __METHOD__, TL_ERROR);
-
-					$error = true;
-					break;
-				}
-			}
-
-			// Redirect if there is an error
-			if ($error)
-			{
-				throw new Contao\CoreBundle\Exception\AccessDeniedException('Not enough permissions to ' . Input::get('act') . ' page ID ' . $cid . ' or paste after/into page ID ' . Input::get('pid') . '.');
-			}
-		}
 	}
 
     /**
      * Return if user has access to the current node
      *
-     * @param BackendUser $user
      * @param TreeModel|int $currentNode
+     * @param BackendUser $user
      * @param array $root
      * @return bool
      */
-	public function hasAccess($user, $currentNode, $root): bool
+	public function hasAccess($currentNode, $user = null, ?array $root = null): bool
     {
-        if (is_int($currentNode)) {
+        if (is_numeric($currentNode)) {
             $currentNode = TreeModel::findByPk($currentNode);
         }
         if (!$currentNode instanceof TreeModel) {
@@ -758,10 +535,218 @@ class TreeContainer
             $rootNode = $currentNode->getRootNode();
         }
 
+        if (!$user) {
+            $user = BackendUser::getInstance();
+        }
+
+        if (!$root) {
+            // Restrict the page tree
+            if (empty($user->rootNodeMounts) || !is_array($user->rootNodeMounts))
+            {
+                $root = array(0);
+            }
+            else
+            {
+                $root = $user->rootNodeMounts;
+            }
+        }
+
         if (in_array($rootNode->id, $root))
         {
             return true;
         }
         return false;
     }
+
+    /**
+	 * Add the breadcrumb menu
+	 */
+	public function addBreadcrumb()
+	{
+		Backend::addPagesBreadcrumb();
+	}
+
+
+	/**
+	 * Return the paste tree element button
+	 *
+	 * @param DataContainer $dc
+	 * @param array         $row
+	 * @param string        $table
+	 * @param boolean       $cr
+	 * @param array         $arrClipboard
+	 *
+	 * @return string
+	 */
+	public function onPasteButtonCallback(DataContainer $dc, $row, $table, $cr, $arrClipboard=null)
+	{
+		$disablePA = false;
+		$disablePI = false;
+
+		$user = BackendUser::getInstance();
+
+		// Disable all buttons if there is a circular reference
+		if ($arrClipboard !== false && (($arrClipboard['mode'] == 'cut' && ($cr == 1 || $arrClipboard['id'] == $row['id'])) || ($arrClipboard['mode'] == 'cutAll' && ($cr == 1 || in_array($row['id'], $arrClipboard['id'])))))
+		{
+			$disablePA = true;
+			$disablePI = true;
+		}
+
+		// Prevent adding non-root pages on top-level
+		if (Input::get('mode') != 'create' && $row['pid'] == 0)
+		{
+		    $stmt = $this->connection->prepare("SELECT * FROM " . $table . " WHERE id=? LIMIT 1");
+		    $stmt->execute([Input::get('id')]);
+		    $objPage = $stmt->fetch(FetchMode::STANDARD_OBJECT);
+
+		    if (!$objPage || !$this->nodeTypeCollection->isRootType($objPage->type))
+			{
+				$disablePA = true;
+
+				if ($row['id'] == 0)
+				{
+					$disablePI = true;
+				}
+			}
+		}
+
+		// Check permissions if the user is not an administrator
+		if (!$user->isAdmin)
+		{
+			// Disable "paste into" button if there is no permission 2 (move) or 1 (create) for the current page
+			if (!$disablePI)
+			{
+
+//				if (!$user->isAllowed(BackendUser::CAN_EDIT_PAGE_HIERARCHY, $row) || (Input::get('mode') == 'create' && !$this->User->isAllowed(BackendUser::CAN_EDIT_PAGE, $row)))
+                if (!$this->hasAccess($row['id'], $user))
+				{
+					$disablePI = true;
+				}
+			}
+
+			$stmt = $this->connection->prepare("SELECT * FROM " . $table . " WHERE id=? LIMIT 1");
+			$stmt->execute([$row['pid']]);
+            $objPage = $stmt->fetch(FetchMode::STANDARD_OBJECT);
+
+			// Disable "paste after" button if there is no permission 2 (move) or 1 (create) for the parent page
+			if (!$disablePA && $objPage)
+			{
+//				if (!$user->isAllowed(BackendUser::CAN_EDIT_PAGE_HIERARCHY, $objPage->row()) || (Input::get('mode') == 'create' && !$this->User->isAllowed(BackendUser::CAN_EDIT_PAGE, $objPage->row())))
+				if (!$this->hasAccess($objPage->id, $user))
+				{
+					$disablePA = true;
+				}
+			}
+
+			// Disable "paste after" button if the parent page is a root page and the user is not an administrator
+//			if (!$disablePA && ($row['pid'] < 1 || in_array($row['id'], $dc->rootIds)))
+			if (!$disablePA && $row['pid'] < 1 && !$user->hasAccess('createRoot', 'huh_treep'))
+			{
+				$disablePA = true;
+			}
+		}
+
+		$return = '';
+
+		// Return the buttons
+		$imagePasteAfter = Image::getHtml('pasteafter.svg', sprintf($GLOBALS['TL_LANG'][$table]['pasteafter'][1], $row['id']));
+		$imagePasteInto = Image::getHtml('pasteinto.svg', sprintf($GLOBALS['TL_LANG'][$table]['pasteinto'][1], $row['id']));
+
+		if ($row['id'] > 0)
+		{
+			$return = $disablePA ? Image::getHtml('pasteafter_.svg') . ' ' : '<a href="' . Backend::addToUrl('act=' . $arrClipboard['mode'] . '&amp;mode=1&amp;pid=' . $row['id'] . (!is_array($arrClipboard['id']) ? '&amp;id=' . $arrClipboard['id'] : '')) . '" title="' . StringUtil::specialchars(sprintf($GLOBALS['TL_LANG'][$table]['pasteafter'][1], $row['id'])) . '" onclick="Backend.getScrollOffset()">' . $imagePasteAfter . '</a> ';
+		}
+
+		return $return . ($disablePI ? Image::getHtml('pasteinto_.svg') . ' ' : '<a href="' . Backend::addToUrl('act=' . $arrClipboard['mode'] . '&amp;mode=2&amp;pid=' . $row['id'] . (!is_array($arrClipboard['id']) ? '&amp;id=' . $arrClipboard['id'] : '')) . '" title="' . StringUtil::specialchars(sprintf($GLOBALS['TL_LANG'][$table]['pasteinto'][1], $row['id'])) . '" onclick="Backend.getScrollOffset()">' . $imagePasteInto . '</a> ');
+	}
+
+	/**
+	 * Return the copy page button
+	 *
+	 * @param array  $row
+	 * @param string $href
+	 * @param string $label
+	 * @param string $title
+	 * @param string $icon
+	 * @param string $attributes
+	 * @param string $table
+	 *
+	 * @return string
+	 */
+	public function onCopyButtonCallback($row, $href, $label, $title, $icon, $attributes, $table)
+	{
+		if ($GLOBALS['TL_DCA'][$table]['config']['closed'])
+		{
+			return '';
+		}
+
+		$user = BackendUser::getInstance();
+
+//		return ($this->User->hasAccess($row['type'], 'alpty') && $this->User->isAllowed(BackendUser::CAN_EDIT_PAGE_HIERARCHY, $row)) ? '<a href="' . $this->addToUrl($href . '&amp;id=' . $row['id']) . '" title="' . StringUtil::specialchars($title) . '"' . $attributes . '>' . Image::getHtml($icon, $label) . '</a> ' : Image::getHtml(preg_replace('/\.svg$/i', '_.svg', $icon)) . ' ';
+		return ($this->hasAccess($row['id'], $user)) ? '<a href="' . Backend::addToUrl($href . '&amp;id=' . $row['id']) . '" title="' . StringUtil::specialchars($title) . '"' . $attributes . '>' . Image::getHtml($icon, $label) . '</a> ' : Image::getHtml(preg_replace('/\.svg$/i', '_.svg', $icon)) . ' ';
+	}
+
+	/**
+	 * Return the copy page with subpages button
+	 *
+	 * @param array  $row
+	 * @param string $href
+	 * @param string $label
+	 * @param string $title
+	 * @param string $icon
+	 * @param string $attributes
+	 * @param string $table
+	 *
+	 * @return string
+	 */
+	public function onCopyChildsButtonCallback($row, $href, $label, $title, $icon, $attributes, $table)
+	{
+		if ($GLOBALS['TL_DCA'][$table]['config']['closed'])
+		{
+			return '';
+		}
+
+		$stmt = $this->connection->prepare("SELECT * FROM tl_tree WHERE pid=? LIMIT 1");
+		$stmt->execute([$row['id']]);
+		$childNodes = $stmt->fetch(FetchMode::STANDARD_OBJECT);
+
+//		return ($childNodes->numRows && $this->User->hasAccess($row['type'], 'alpty') && $this->User->isAllowed(BackendUser::CAN_EDIT_PAGE_HIERARCHY, $row)) ? '<a href="' . $this->addToUrl($href . '&amp;id=' . $row['id']) . '" title="' . StringUtil::specialchars($title) . '"' . $attributes . '>' . Image::getHtml($icon, $label) . '</a> ' : Image::getHtml(preg_replace('/\.svg$/i', '_.svg', $icon)) . ' ';
+		return ($childNodes && $this->hasAccess($row['id'])) ? '<a href="' . Backend::addToUrl($href . '&amp;id=' . $row['id']) . '" title="' . StringUtil::specialchars($title) . '"' . $attributes . '>' . Image::getHtml($icon, $label) . '</a> ' : Image::getHtml(preg_replace('/\.svg$/i', '_.svg', $icon)) . ' ';
+	}
+
+    /**
+	 * Return the cut page button
+	 *
+	 * @param array  $row
+	 * @param string $href
+	 * @param string $label
+	 * @param string $title
+	 * @param string $icon
+	 * @param string $attributes
+	 *
+	 * @return string
+	 */
+	public function onCutButtonCallback($row, $href, $label, $title, $icon, $attributes)
+	{
+//		return ($this->User->hasAccess($row['type'], 'alpty') && $this->User->isAllowed(BackendUser::CAN_EDIT_PAGE_HIERARCHY, $row)) ? '<a href="' . $this->addToUrl($href . '&amp;id=' . $row['id']) . '" title="' . StringUtil::specialchars($title) . '"' . $attributes . '>' . Image::getHtml($icon, $label) . '</a> ' : Image::getHtml(preg_replace('/\.svg$/i', '_.svg', $icon)) . ' ';
+		return ($this->hasAccess($row['id'])) ? '<a href="' . Backend::addToUrl($href . '&amp;id=' . $row['id']) . '" title="' . StringUtil::specialchars($title) . '"' . $attributes . '>' . Image::getHtml($icon, $label) . '</a> ' : ' ';
+	}
+
+    /**
+	 * Return the edit tree node button
+	 *
+	 * @param array  $row
+	 * @param string $href
+	 * @param string $label
+	 * @param string $title
+	 * @param string $icon
+	 * @param string $attributes
+	 *
+	 * @return string
+	 */
+	public function onEditButtonCallback($row, $href, $label, $title, $icon, $attributes)
+	{
+//		return ($this->User->hasAccess($row['type'], 'alpty') && $this->User->isAllowed(BackendUser::CAN_EDIT_PAGE, $row)) ? '<a href="' . $this->addToUrl($href . '&amp;id=' . $row['id']) . '" title="' . StringUtil::specialchars($title) . '"' . $attributes . '>' . Image::getHtml($icon, $label) . '</a> ' : Image::getHtml(preg_replace('/\.svg$/i', '_.svg', $icon)) . ' ';
+		return ($this->hasAccess($row['id'])) ? '<a href="' . Backend::addToUrl($href . '&amp;id=' . $row['id']) . '" title="' . StringUtil::specialchars($title) . '"' . $attributes . '>' . Image::getHtml($icon, $label) . '</a> ' : Image::getHtml(preg_replace('/\.svg$/i', '_.svg', $icon)) . ' ';
+	}
 }

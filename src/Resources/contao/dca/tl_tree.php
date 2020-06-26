@@ -10,25 +10,8 @@ $GLOBALS['TL_DCA']['tl_tree'] = array
 		'enableVersioning'            => true,
 		'onload_callback' => array
 		(
-//			array('tl_page', 'addBreadcrumb'),
 			array(\HeimrichHannot\TreeBundle\EventListener\DataContainer\TreeContainer::class, 'onLoadCallback'),
-//			array('tl_page', 'makeRedirectPageMandatory'),
-//			array('tl_page', 'generateSitemap')
 		),
-		'oncut_callback' => array
-		(
-//			array(\HeimrichHannot\TreeBundle\EventListener\DataContainer\TreeContainer::class, 'scheduleUpdate')
-		),
-//		'ondelete_callback' => array
-//		(
-//			array('tl_page', 'purgeSearchIndex'),
-//			array('tl_page', 'scheduleUpdate')
-//		),
-//		'onsubmit_callback' => array
-//		(
-//			array('tl_page', 'scheduleUpdate'),
-//			array('tl_page', 'generateArticle')
-//		),
 		'sql' => array
 		(
 			'keys' => array
@@ -47,7 +30,7 @@ $GLOBALS['TL_DCA']['tl_tree'] = array
         (
             'mode'               => 5,
             'icon'               => 'pagemounts.svg',
-//			'paste_button_callback'   => array('tl_page', 'pastePage'),
+			'paste_button_callback'   => array(\HeimrichHannot\TreeBundle\EventListener\DataContainer\TreeContainer::class, 'onPasteButtonCallback'),
             'panelLayout'        => 'filter;search',
             'child_record_class' => 'tl_tree',
         ),
@@ -81,7 +64,7 @@ $GLOBALS['TL_DCA']['tl_tree'] = array
 				'label'               => &$GLOBALS['TL_LANG']['tl_tree']['edit'],
 				'href'                => 'act=edit',
 				'icon'                => 'edit.svg',
-//				'button_callback'     => array('tl_page', 'editPage')
+				'button_callback'     => array(\HeimrichHannot\TreeBundle\EventListener\DataContainer\TreeContainer::class, 'onEditButtonCallback')
 			),
 			'copy' => array
 			(
@@ -89,7 +72,7 @@ $GLOBALS['TL_DCA']['tl_tree'] = array
 				'href'                => 'act=paste&amp;mode=copy',
 				'icon'                => 'copy.svg',
 				'attributes'          => 'onclick="Backend.getScrollOffset()"',
-//				'button_callback'     => array('tl_page', 'copyPage')
+				'button_callback'     => array(\HeimrichHannot\TreeBundle\EventListener\DataContainer\TreeContainer::class, 'onCopyButtonCallback')
 			),
 			'copyChilds' => array
 			(
@@ -97,7 +80,7 @@ $GLOBALS['TL_DCA']['tl_tree'] = array
 				'href'                => 'act=paste&amp;mode=copy&amp;childs=1',
 				'icon'                => 'copychilds.svg',
 				'attributes'          => 'onclick="Backend.getScrollOffset()"',
-//				'button_callback'     => array('tl_page', 'copyPageWithSubpages')
+				'button_callback'     => array(\HeimrichHannot\TreeBundle\EventListener\DataContainer\TreeContainer::class, 'onCopyChildsButtonCallback')
 			),
 			'cut' => array
 			(
@@ -105,7 +88,7 @@ $GLOBALS['TL_DCA']['tl_tree'] = array
 				'href'                => 'act=paste&amp;mode=cut',
 				'icon'                => 'cut.svg',
 				'attributes'          => 'onclick="Backend.getScrollOffset()"',
-//				'button_callback'     => array('tl_page', 'cutPage')
+				'button_callback'     => array(\HeimrichHannot\TreeBundle\EventListener\DataContainer\TreeContainer::class, 'onCutButtonCallback')
 			),
 			'delete' => array
 			(
@@ -303,15 +286,6 @@ $GLOBALS['TL_DCA']['tl_tree'] = array
 //		parent::__construct();
 //		$this->import('BackendUser', 'User');
 //	}
-//
-//	/**
-//	 * Add the breadcrumb menu
-//	 */
-//	public function addBreadcrumb()
-//	{
-//		Backend::addPagesBreadcrumb();
-//	}
-//
 
 
 //	/**
@@ -332,127 +306,6 @@ $GLOBALS['TL_DCA']['tl_tree'] = array
 //		}
 //
 //		return $varValue;
-//	}
-//
-//	/**
-//	 * Make the redirect page mandatory if the page is a logout page
-//	 *
-//	 * @param DataContainer $dc
-//	 *
-//	 * @throws Exception
-//	 */
-//	public function makeRedirectPageMandatory(DataContainer $dc)
-//	{
-//		$objPage = $this->Database->prepare("SELECT * FROM " . $dc->table . " WHERE id=?")
-//								  ->limit(1)
-//								  ->execute($dc->id);
-//
-//		if ($objPage->numRows && $objPage->type == 'logout')
-//		{
-//			$GLOBALS['TL_DCA']['tl_page']['fields']['jumpTo']['eval']['mandatory'] = true;
-//		}
-//	}
-//
-//	/**
-//	 * Check for modified pages and update the XML files if necessary
-//	 */
-//	public function generateSitemap()
-//	{
-//		/** @var Symfony\Component\HttpFoundation\Session\SessionInterface $objSession */
-//		$objSession = System::getContainer()->get('session');
-//
-//		$session = $objSession->get('sitemap_updater');
-//
-//		if (empty($session) || !is_array($session))
-//		{
-//			return;
-//		}
-//
-//		$this->import('Automator');
-//
-//		foreach ($session as $id)
-//		{
-//			$this->Automator->generateSitemap($id);
-//		}
-//
-//		$objSession->set('sitemap_updater', null);
-//	}
-//
-//	/**
-//	 * Automatically create an article in the main column of a new page
-//	 *
-//	 * @param DataContainer $dc
-//	 */
-//	public function generateArticle(DataContainer $dc)
-//	{
-//		// Return if there is no active record (override all)
-//		if (!$dc->activeRecord)
-//		{
-//			return;
-//		}
-//
-//		// No title or not a regular page
-//		if ($dc->activeRecord->title == '' || !in_array($dc->activeRecord->type, array('regular', 'error_403', 'error_404')))
-//		{
-//			return;
-//		}
-//
-//		/** @var Symfony\Component\HttpFoundation\Session\Attribute\AttributeBagInterface $objSessionBag */
-//		$objSessionBag = System::getContainer()->get('session')->getBag('contao_backend');
-//
-//		$new_records = $objSessionBag->get('new_records');
-//
-//		// Not a new page
-//		if (!$new_records || !is_array($new_records[$dc->table]) || !in_array($dc->id, $new_records[$dc->table]))
-//		{
-//			return;
-//		}
-//
-//		// Check whether there are articles (e.g. on copied pages)
-//		$objTotal = $this->Database->prepare("SELECT COUNT(*) AS count FROM tl_article WHERE pid=?")
-//								   ->execute($dc->id);
-//
-//		if ($objTotal->count > 0)
-//		{
-//			return;
-//		}
-//
-//		// Create article
-//		$arrSet['pid'] = $dc->id;
-//		$arrSet['sorting'] = 128;
-//		$arrSet['tstamp'] = time();
-//		$arrSet['author'] = $this->User->id;
-//		$arrSet['inColumn'] = 'main';
-//		$arrSet['title'] = $dc->activeRecord->title;
-//		$arrSet['alias'] = str_replace('/', '-', $dc->activeRecord->alias); // see #5168
-//		$arrSet['published'] = $dc->activeRecord->published;
-//
-//		$this->Database->prepare("INSERT INTO tl_article %s")->set($arrSet)->execute();
-//	}
-//
-//	/**
-//	 * Purge the search index if a page is being deleted
-//	 *
-//	 * @param DataContainer $dc
-//	 */
-//	public function purgeSearchIndex(DataContainer $dc)
-//	{
-//		if (!$dc->id)
-//		{
-//			return;
-//		}
-//
-//		$objResult = $this->Database->prepare("SELECT id FROM tl_search WHERE pid=?")
-//									->execute($dc->id);
-//
-//		while ($objResult->next())
-//		{
-//			$this->Database->prepare("DELETE FROM tl_search WHERE id=?")
-//						   ->execute($objResult->id);
-//
-//			$this->Database->prepare("DELETE FROM tl_search_index WHERE pid=?")
-//						   ->execute($objResult->id);
-//		}
 //	}
 //
 //	/**
@@ -541,177 +394,6 @@ $GLOBALS['TL_DCA']['tl_tree'] = array
 //		}
 //
 //		return $return;
-//	}
-//
-//	/**
-//	 * Return the edit page button
-//	 *
-//	 * @param array  $row
-//	 * @param string $href
-//	 * @param string $label
-//	 * @param string $title
-//	 * @param string $icon
-//	 * @param string $attributes
-//	 *
-//	 * @return string
-//	 */
-//	public function editPage($row, $href, $label, $title, $icon, $attributes)
-//	{
-//		return ($this->User->hasAccess($row['type'], 'alpty') && $this->User->isAllowed(BackendUser::CAN_EDIT_PAGE, $row)) ? '<a href="' . $this->addToUrl($href . '&amp;id=' . $row['id']) . '" title="' . StringUtil::specialchars($title) . '"' . $attributes . '>' . Image::getHtml($icon, $label) . '</a> ' : Image::getHtml(preg_replace('/\.svg$/i', '_.svg', $icon)) . ' ';
-//	}
-//
-//	/**
-//	 * Return the copy page button
-//	 *
-//	 * @param array  $row
-//	 * @param string $href
-//	 * @param string $label
-//	 * @param string $title
-//	 * @param string $icon
-//	 * @param string $attributes
-//	 * @param string $table
-//	 *
-//	 * @return string
-//	 */
-//	public function copyPage($row, $href, $label, $title, $icon, $attributes, $table)
-//	{
-//		if ($GLOBALS['TL_DCA'][$table]['config']['closed'])
-//		{
-//			return '';
-//		}
-//
-//		return ($this->User->hasAccess($row['type'], 'alpty') && $this->User->isAllowed(BackendUser::CAN_EDIT_PAGE_HIERARCHY, $row)) ? '<a href="' . $this->addToUrl($href . '&amp;id=' . $row['id']) . '" title="' . StringUtil::specialchars($title) . '"' . $attributes . '>' . Image::getHtml($icon, $label) . '</a> ' : Image::getHtml(preg_replace('/\.svg$/i', '_.svg', $icon)) . ' ';
-//	}
-//
-//	/**
-//	 * Return the copy page with subpages button
-//	 *
-//	 * @param array  $row
-//	 * @param string $href
-//	 * @param string $label
-//	 * @param string $title
-//	 * @param string $icon
-//	 * @param string $attributes
-//	 * @param string $table
-//	 *
-//	 * @return string
-//	 */
-//	public function copyPageWithSubpages($row, $href, $label, $title, $icon, $attributes, $table)
-//	{
-//		if ($GLOBALS['TL_DCA'][$table]['config']['closed'])
-//		{
-//			return '';
-//		}
-//
-//		$objSubpages = $this->Database->prepare("SELECT * FROM tl_page WHERE pid=?")
-//									  ->limit(1)
-//									  ->execute($row['id']);
-//
-//		return ($objSubpages->numRows && $this->User->hasAccess($row['type'], 'alpty') && $this->User->isAllowed(BackendUser::CAN_EDIT_PAGE_HIERARCHY, $row)) ? '<a href="' . $this->addToUrl($href . '&amp;id=' . $row['id']) . '" title="' . StringUtil::specialchars($title) . '"' . $attributes . '>' . Image::getHtml($icon, $label) . '</a> ' : Image::getHtml(preg_replace('/\.svg$/i', '_.svg', $icon)) . ' ';
-//	}
-//
-//	/**
-//	 * Return the cut page button
-//	 *
-//	 * @param array  $row
-//	 * @param string $href
-//	 * @param string $label
-//	 * @param string $title
-//	 * @param string $icon
-//	 * @param string $attributes
-//	 *
-//	 * @return string
-//	 */
-//	public function cutPage($row, $href, $label, $title, $icon, $attributes)
-//	{
-//		return ($this->User->hasAccess($row['type'], 'alpty') && $this->User->isAllowed(BackendUser::CAN_EDIT_PAGE_HIERARCHY, $row)) ? '<a href="' . $this->addToUrl($href . '&amp;id=' . $row['id']) . '" title="' . StringUtil::specialchars($title) . '"' . $attributes . '>' . Image::getHtml($icon, $label) . '</a> ' : Image::getHtml(preg_replace('/\.svg$/i', '_.svg', $icon)) . ' ';
-//	}
-//
-//	/**
-//	 * Return the paste page button
-//	 *
-//	 * @param DataContainer $dc
-//	 * @param array         $row
-//	 * @param string        $table
-//	 * @param boolean       $cr
-//	 * @param array         $arrClipboard
-//	 *
-//	 * @return string
-//	 */
-//	public function pastePage(DataContainer $dc, $row, $table, $cr, $arrClipboard=null)
-//	{
-//		$disablePA = false;
-//		$disablePI = false;
-//
-//		// Disable all buttons if there is a circular reference
-//		if ($arrClipboard !== false && (($arrClipboard['mode'] == 'cut' && ($cr == 1 || $arrClipboard['id'] == $row['id'])) || ($arrClipboard['mode'] == 'cutAll' && ($cr == 1 || in_array($row['id'], $arrClipboard['id'])))))
-//		{
-//			$disablePA = true;
-//			$disablePI = true;
-//		}
-//
-//		// Prevent adding non-root pages on top-level
-//		if (Input::get('mode') != 'create' && $row['pid'] == 0)
-//		{
-//			$objPage = $this->Database->prepare("SELECT * FROM " . $table . " WHERE id=?")
-//									  ->limit(1)
-//									  ->execute(Input::get('id'));
-//
-//			if ($objPage->type != 'root')
-//			{
-//				$disablePA = true;
-//
-//				if ($row['id'] == 0)
-//				{
-//					$disablePI = true;
-//				}
-//			}
-//		}
-//
-//		// Check permissions if the user is not an administrator
-//		if (!$this->User->isAdmin)
-//		{
-//			// Disable "paste into" button if there is no permission 2 (move) or 1 (create) for the current page
-//			if (!$disablePI)
-//			{
-//				if (!$this->User->isAllowed(BackendUser::CAN_EDIT_PAGE_HIERARCHY, $row) || (Input::get('mode') == 'create' && !$this->User->isAllowed(BackendUser::CAN_EDIT_PAGE, $row)))
-//				{
-//					$disablePI = true;
-//				}
-//			}
-//
-//			$objPage = $this->Database->prepare("SELECT * FROM " . $table . " WHERE id=?")
-//									  ->limit(1)
-//									  ->execute($row['pid']);
-//
-//			// Disable "paste after" button if there is no permission 2 (move) or 1 (create) for the parent page
-//			if (!$disablePA && $objPage->numRows)
-//			{
-//				if (!$this->User->isAllowed(BackendUser::CAN_EDIT_PAGE_HIERARCHY, $objPage->row()) || (Input::get('mode') == 'create' && !$this->User->isAllowed(BackendUser::CAN_EDIT_PAGE, $objPage->row())))
-//				{
-//					$disablePA = true;
-//				}
-//			}
-//
-//			// Disable "paste after" button if the parent page is a root page and the user is not an administrator
-//			if (!$disablePA && ($row['pid'] < 1 || in_array($row['id'], $dc->rootIds)))
-//			{
-//				$disablePA = true;
-//			}
-//		}
-//
-//		$return = '';
-//
-//		// Return the buttons
-//		$imagePasteAfter = Image::getHtml('pasteafter.svg', sprintf($GLOBALS['TL_LANG'][$table]['pasteafter'][1], $row['id']));
-//		$imagePasteInto = Image::getHtml('pasteinto.svg', sprintf($GLOBALS['TL_LANG'][$table]['pasteinto'][1], $row['id']));
-//
-//		if ($row['id'] > 0)
-//		{
-//			$return = $disablePA ? Image::getHtml('pasteafter_.svg') . ' ' : '<a href="' . $this->addToUrl('act=' . $arrClipboard['mode'] . '&amp;mode=1&amp;pid=' . $row['id'] . (!is_array($arrClipboard['id']) ? '&amp;id=' . $arrClipboard['id'] : '')) . '" title="' . StringUtil::specialchars(sprintf($GLOBALS['TL_LANG'][$table]['pasteafter'][1], $row['id'])) . '" onclick="Backend.getScrollOffset()">' . $imagePasteAfter . '</a> ';
-//		}
-//
-//		return $return . ($disablePI ? Image::getHtml('pasteinto_.svg') . ' ' : '<a href="' . $this->addToUrl('act=' . $arrClipboard['mode'] . '&amp;mode=2&amp;pid=' . $row['id'] . (!is_array($arrClipboard['id']) ? '&amp;id=' . $arrClipboard['id'] : '')) . '" title="' . StringUtil::specialchars(sprintf($GLOBALS['TL_LANG'][$table]['pasteinto'][1], $row['id'])) . '" onclick="Backend.getScrollOffset()">' . $imagePasteInto . '</a> ');
 //	}
 //
 //	/**
