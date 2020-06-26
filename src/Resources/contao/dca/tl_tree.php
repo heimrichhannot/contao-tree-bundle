@@ -114,21 +114,13 @@ $GLOBALS['TL_DCA']['tl_tree'] = array
 		)
 	),
 
-	// Select
-//	'select' => array
-//	(
-//		'buttons_callback' => array
-//		(
-//			array('tl_page', 'addAliasButton')
-//		)
-//	),
-
     // Palettes
     'palettes' => array
     (
         '__selector__' => array('type'),
-        'default'      => \HeimrichHannot\TreeBundle\EventListener\DataContainer\TreeContainer::PREPEND_PALETTE
-            . '{content_legend},description;',
+        'default'      => \HeimrichHannot\TreeBundle\TreeNode\AbstractTreeNode::PREPEND_PALETTE
+            . '{content_legend},description;'
+            . \HeimrichHannot\TreeBundle\TreeNode\AbstractTreeNode::APPEND_PALETTE,
     ),
 
 	// Subpalettes
@@ -159,7 +151,7 @@ $GLOBALS['TL_DCA']['tl_tree'] = array
 		),
 		'title' => array
 		(
-			'label'                   => &$GLOBALS['TL_LANG']['tl_page']['title'],
+			'label'                   => &$GLOBALS['TL_LANG']['tl_tree']['title'],
 			'exclude'                 => true,
 			'search'                  => true,
 			'inputType'               => 'text',
@@ -177,7 +169,7 @@ $GLOBALS['TL_DCA']['tl_tree'] = array
 		),
 		'alias' => array
 		(
-			'label'                   => &$GLOBALS['TL_LANG']['tl_page']['alias'],
+			'label'                   => &$GLOBALS['TL_LANG']['tl_tree']['alias'],
 			'exclude'                 => true,
 			'search'                  => true,
 			'inputType'               => 'text',
@@ -190,7 +182,7 @@ $GLOBALS['TL_DCA']['tl_tree'] = array
 		),
 		'type' => array
 		(
-			'label'                   => &$GLOBALS['TL_LANG']['tl_page']['type'],
+			'label'                   => &$GLOBALS['TL_LANG']['tl_tree']['type'],
 			'default'                 => 'regular',
 			'exclude'                 => true,
 			'filter'                  => true,
@@ -219,7 +211,7 @@ $GLOBALS['TL_DCA']['tl_tree'] = array
         ),
 		'description' => array
 		(
-			'label'                   => &$GLOBALS['TL_LANG']['tl_page']['description'],
+			'label'                   => &$GLOBALS['TL_LANG']['tl_tree']['description'],
 			'exclude'                 => true,
 			'search'                  => true,
 			'inputType'               => 'textarea',
@@ -239,7 +231,7 @@ $GLOBALS['TL_DCA']['tl_tree'] = array
 //		),
 		'published' => array
 		(
-			'label'                   => &$GLOBALS['TL_LANG']['tl_page']['published'],
+			'label'                   => &$GLOBALS['TL_LANG']['tl_tree']['published'],
 			'exclude'                 => true,
 			'filter'                  => true,
 			'inputType'               => 'checkbox',
@@ -248,7 +240,7 @@ $GLOBALS['TL_DCA']['tl_tree'] = array
 		),
 		'start' => array
 		(
-			'label'                   => &$GLOBALS['TL_LANG']['tl_page']['start'],
+			'label'                   => &$GLOBALS['TL_LANG']['tl_tree']['start'],
 			'exclude'                 => true,
 			'inputType'               => 'text',
 			'eval'                    => array('rgxp'=>'datim', 'datepicker'=>true, 'tl_class'=>'w50 wizard'),
@@ -256,7 +248,7 @@ $GLOBALS['TL_DCA']['tl_tree'] = array
 		),
 		'stop' => array
 		(
-			'label'                   => &$GLOBALS['TL_LANG']['tl_page']['stop'],
+			'label'                   => &$GLOBALS['TL_LANG']['tl_tree']['stop'],
 			'exclude'                 => true,
 			'inputType'               => 'text',
 			'eval'                    => array('rgxp'=>'datim', 'datepicker'=>true, 'tl_class'=>'w50 wizard'),
@@ -265,12 +257,6 @@ $GLOBALS['TL_DCA']['tl_tree'] = array
 	)
 );
 
-//// Disable the articles link in the modal window
-//if (Input::get('popup'))
-//{
-//	unset($GLOBALS['TL_DCA']['tl_page']['list']['operations']['articles']);
-//}
-
 ///**
 // * Provide miscellaneous methods that are used by the data configuration array.
 // *
@@ -278,67 +264,7 @@ $GLOBALS['TL_DCA']['tl_tree'] = array
 // */
 //class tl_page extends Backend
 //{
-//	/**
-//	 * Import the back end user object
-//	 */
-//	public function __construct()
-//	{
-//		parent::__construct();
-//		$this->import('BackendUser', 'User');
-//	}
 
-
-//	/**
-//	 * Make sure that top-level pages are root pages
-//	 *
-//	 * @param mixed         $varValue
-//	 * @param DataContainer $dc
-//	 *
-//	 * @return mixed
-//	 *
-//	 * @throws Exception
-//	 */
-//	public function checkRootType($varValue, DataContainer $dc)
-//	{
-//		if ($varValue != 'root' && $dc->activeRecord->pid == 0)
-//		{
-//			throw new Exception($GLOBALS['TL_LANG']['ERR']['topLevelRoot']);
-//		}
-//
-//		return $varValue;
-//	}
-//
-//	/**
-//	 * Check the sitemap alias
-//	 *
-//	 * @param mixed         $varValue
-//	 * @param DataContainer $dc
-//	 *
-//	 * @return mixed
-//	 *
-//	 * @throws Exception
-//	 */
-//	public function checkFeedAlias($varValue, DataContainer $dc)
-//	{
-//		// No change or empty value
-//		if ($varValue == $dc->value || $varValue == '')
-//		{
-//			return $varValue;
-//		}
-//
-//		$varValue = StringUtil::standardize($varValue); // see #5096
-//
-//		$this->import('Automator');
-//		$arrFeeds = $this->Automator->purgeXmlFiles(true);
-//
-//		// Alias exists
-//		if (in_array($varValue, $arrFeeds))
-//		{
-//			throw new Exception(sprintf($GLOBALS['TL_LANG']['ERR']['aliasExists'], $varValue));
-//		}
-//
-//		return $varValue;
-//	}
 //
 //	/**
 //	 * Prevent circular references

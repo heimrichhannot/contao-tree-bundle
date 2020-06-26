@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+  <file source-language="en" target-language="en" datatype="plaintext" original="ng2.template">
+    <body>
+      <trans-unit id="tl_tree.content_legend" datatype="html">
+        <source/>
+      </trans-unit>
+      <trans-unit id="tl_tree.edit" datatype="html">
+        <source/>
+      </trans-unit>
+      <trans-unit id="tl_tree.editheader" datatype="html">
+        <source/>
+      </trans-unit>
+      <trans-unit id="tl_tree.internalTitle.0" datatype="html">
+        <source/>
+      </trans-unit>
+      <trans-unit id="tl_tree.new" datatype="html">
+        <source/>
+      </trans-unit>
+      <trans-unit id="tl_tree.title.0" datatype="html">
+        <source>Title</source>
+        <target>Title</target>
+      </trans-unit>
+      <trans-unit id="tl_tree.title.1" datatype="html">
+        <source>Please enter a tree node title.</source>
+        <target>Please enter a tree node title.</target>
+      </trans-unit>
+      <trans-unit id="tl_tree.type_legend" datatype="html">
+        <source/>
+      </trans-unit>
+      <trans-unit id="tl_tree.TYPES.mainroot" datatype="html">
+        <source>Tree structures</source>
+        <target>Tree structures</target>
+      </trans-unit>
+      <trans-unit id="tl_tree.TYPES.member_node" datatype="html">
+        <source>Member node</source>
+        <target>Member node</target>
+      </trans-unit>
+      <trans-unit id="tl_tree.TYPES.simple_node" datatype="html">
+        <source>Simple node</source>
+        <target>Simple node</target>
+      </trans-unit>
+    </body>
+  </file>
+</xliff>

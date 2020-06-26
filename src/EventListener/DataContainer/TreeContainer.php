@@ -58,7 +58,7 @@ class TreeContainer
 
         if (0 == $node->pid) {
             $palettes = &$GLOBALS['TL_DCA']['tl_tree']['palettes'];
-            $palettes[$node->type] = str_replace(',title,', ',title,internalTitle,', $palettes[$node->type]);
+            $palettes[$node->type] = '{tree_legend},internalTitle;'.$palettes[$node->type];
         }
         $this->setRootType($dc);
     }
@@ -132,17 +132,6 @@ class TreeContainer
         if ('' == $varValue) {
             $autoAlias = true;
             $varValue = StringUtil::generateAlias($dc->activeRecord->title);
-
-            // Generate folder URL aliases (see #4933)
-//			if (Config::get('folderUrl'))
-//			{
-//				$objPage = PageModel::findWithDetails($dc->activeRecord->id);
-//
-//				if ($objPage->folderUrl != '')
-//				{
-//					$varValue = $objPage->folderUrl . $varValue;
-//				}
-//			}
         }
 
         $stmt = $this->connection->prepare('SELECT id FROM tl_tree WHERE id=? OR alias=?');
