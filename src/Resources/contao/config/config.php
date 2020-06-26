@@ -2,7 +2,7 @@
 /**
  * Backend modules
  */
-$GLOBALS['BE_MOD']['content']['tree'] = [
+$GLOBALS['BE_MOD']['content']['huh_tree'] = [
     'tables' => ['tl_tree'],
 ];
 
