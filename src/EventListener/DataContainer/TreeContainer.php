@@ -1,16 +1,12 @@
 <?php
-/**
- * Contao Open Source CMS
- *
+
+/*
  * Copyright (c) 2020 Heimrich & Hannot GmbH
  *
- * @author  Thomas Körner <t.koerner@heimrich-hannot.de>
- * @license http://www.gnu.org/licences/lgpl-3.0.html LGPL
+ * @license LGPL-3.0-or-later
  */
 
-
 namespace HeimrichHannot\TreeBundle\EventListener\DataContainer;
-
 
 use Contao\BackendUser;
 use Contao\CoreBundle\Exception\AccessDeniedException;
@@ -49,104 +45,95 @@ class TreeContainer
 
     public function __construct(Connection $connection, NodeTypeCollection $collection, SessionInterface $session)
     {
-        $this->connection         = $connection;
+        $this->connection = $connection;
         $this->nodeTypeCollection = $collection;
         $this->session = $session;
     }
 
-    /**
-     * @param DataContainer $dc
-     */
     public function onLoadCallback(DataContainer $dc)
     {
         $this->addBreadcrumb();
         $this->checkPermission();
         $node = TreeModel::findByPk($dc->id);
+
         if (0 == $node->pid) {
             $palettes = &$GLOBALS['TL_DCA']['tl_tree']['palettes'];
-            $palettes[$node->type] = str_replace(',title,',',title,internalTitle,', $palettes[$node->type]);
+            $palettes[$node->type] = str_replace(',title,', ',title,internalTitle,', $palettes[$node->type]);
         }
         $this->setRootType($dc);
     }
 
     /**
      * @param $varValue
-     * @param DataContainer $dc
+     *
      * @throws Exception
      */
     public function onTypeSaveCallback($varValue, DataContainer $dc): string
     {
-        if ($dc->activeRecord->pid == 0) {
-            if (!in_array($varValue, $this->nodeTypeCollection->getRootNodeTypes())) {
+        if (0 == $dc->activeRecord->pid) {
+            if (!\in_array($varValue, $this->nodeTypeCollection->getRootNodeTypes())) {
                 throw new Exception($GLOBALS['TL_LANG']['ERR']['huh_tree_topLevelNode']);
             }
         } else {
             $parentNodeModel = TreeModel::findByPk($dc->pid);
+
             if ($parentNodeModel && ($parentNodeType = $this->nodeTypeCollection->getNodeType($parentNodeModel->type))) {
                 $allowedNodeTypes = $parentNodeType::allowedChilds();
-                if (!in_array($varValue, $allowedNodeTypes)) {
+
+                if (!\in_array($varValue, $allowedNodeTypes)) {
                     throw new Exception(sprintf($GLOBALS['TL_LANG']['ERR']['huh_tree_nodeTypeNotAllowed'], $varValue));
                 }
             }
         }
+
         return $varValue;
     }
 
+    /**
+     * Make new top-level nodes root nodes.
+     */
+    public function setRootType(DataContainer $dc)
+    {
+        if ('create' != Input::get('act')) {
+            return;
+        }
+        $rootNodeTypes = $this->nodeTypeCollection->getRootNodeTypes();
+        $defaultRootPageType = reset($rootNodeTypes);
+
+        // Insert into
+        if (0 == Input::get('pid')) {
+            $GLOBALS['TL_DCA']['tl_tree']['fields']['type']['default'] = $defaultRootPageType;
+        } elseif (1 == Input::get('mode')) {
+            $stmt = $this->connection->prepare('SELECT * FROM '.$dc->table.' WHERE id=? LIMIT 1');
+            $stmt->execute([Input::get('pid')]);
+
+            $node = $stmt->fetch();
+
+            if (0 == $node['pid']) {
+                $GLOBALS['TL_DCA']['tl_tree']['fields']['type']['default'] = $defaultRootPageType;
+            }
+        }
+    }
 
     /**
-	 * Make new top-level nodes root nodes
-	 *
-	 * @param DataContainer $dc
-	 */
-	public function setRootType(DataContainer $dc)
-	{
-		if (Input::get('act') != 'create')
-		{
-			return;
-		}
-		$rootNodeTypes = $this->nodeTypeCollection->getRootNodeTypes();
-		$defaultRootPageType = reset($rootNodeTypes);
+     * Auto-generate a page alias if it has not been set yet.
+     *
+     * @param mixed $varValue
+     *
+     * @throws \Exception
+     *
+     * @return string
+     */
+    public function generateAlias($varValue, DataContainer $dc)
+    {
+        $autoAlias = false;
 
-		// Insert into
-		if (Input::get('pid') == 0)
-		{
-			$GLOBALS['TL_DCA']['tl_tree']['fields']['type']['default'] = $defaultRootPageType;
-		}
-		elseif (Input::get('mode') == 1)
-		{
-		    $stmt = $this->connection->prepare("SELECT * FROM " . $dc->table . " WHERE id=? LIMIT 1");
-		    $stmt->execute([Input::get('pid')]);
+        // Generate an alias if there is none
+        if ('' == $varValue) {
+            $autoAlias = true;
+            $varValue = StringUtil::generateAlias($dc->activeRecord->title);
 
-			$node = $stmt->fetch();
-
-			if ($node['pid'] == 0)
-			{
-				$GLOBALS['TL_DCA']['tl_tree']['fields']['type']['default'] = $defaultRootPageType;
-			}
-		}
-	}
-
-	/**
-	 * Auto-generate a page alias if it has not been set yet
-	 *
-	 * @param mixed         $varValue
-	 * @param DataContainer $dc
-	 *
-	 * @return string
-	 *
-	 * @throws \Exception
-	 */
-	public function generateAlias($varValue, DataContainer $dc)
-	{
-		$autoAlias = false;
-
-		// Generate an alias if there is none
-		if ($varValue == '')
-		{
-			$autoAlias = true;
-			$varValue = StringUtil::generateAlias($dc->activeRecord->title);
-
-			// Generate folder URL aliases (see #4933)
+            // Generate folder URL aliases (see #4933)
 //			if (Config::get('folderUrl'))
 //			{
 //				$objPage = PageModel::findWithDetails($dc->activeRecord->id);
@@ -156,92 +143,86 @@ class TreeContainer
 //					$varValue = $objPage->folderUrl . $varValue;
 //				}
 //			}
-		}
+        }
 
-        $stmt = $this->connection->prepare("SELECT id FROM tl_tree WHERE id=? OR alias=?");
+        $stmt = $this->connection->prepare('SELECT id FROM tl_tree WHERE id=? OR alias=?');
         $stmt->execute([$dc->id, $varValue]);
 
-		// Check whether the page alias exists
-		if ($stmt->rowCount() > ($autoAlias ? 0 : 1))
-		{
-            if (!$autoAlias)
-            {
+        // Check whether the page alias exists
+        if ($stmt->rowCount() > ($autoAlias ? 0 : 1)) {
+            if (!$autoAlias) {
                 throw new \Exception(sprintf($GLOBALS['TL_LANG']['ERR']['aliasExists'], $varValue));
             }
 
-            $varValue .= '-' . $dc->id;
-		}
+            $varValue .= '-'.$dc->id;
+        }
 
-		return $varValue;
-	}
+        return $varValue;
+    }
 
     /**
-	 * Returns all allowed node types as array
-	 *
-	 * @param DataContainer $dc
-	 *
-	 * @return array
-	 */
-	public function onTypeOptionsCallback(DataContainer $dc)
-	{
-	    $user = BackendUser::getInstance();
-		$arrOptions = array();
+     * Returns all allowed node types as array.
+     *
+     * @return array
+     */
+    public function onTypeOptionsCallback(DataContainer $dc)
+    {
+        $user = BackendUser::getInstance();
+        $arrOptions = [];
         $allowedNodeTypes = null;
 
-		if ($dc->activeRecord && $dc->activeRecord->pid == 0) {
-		    $nodeTypes = $this->nodeTypeCollection->getRootNodeTypes();
+        if ($dc->activeRecord && 0 == $dc->activeRecord->pid) {
+            $nodeTypes = $this->nodeTypeCollection->getRootNodeTypes();
         } else {
-		    $nodeTypes = $this->nodeTypeCollection->getBranchNodeTypes();
-		    $parentNodeModel = TreeModel::findByPk($dc->activeRecord->pid);
-		    if ($parentNodeModel && ($parentNodeType = $this->nodeTypeCollection->getNodeType($parentNodeModel->type))) {
-		        $allowedNodeTypes = $parentNodeType::allowedChilds();
+            $nodeTypes = $this->nodeTypeCollection->getBranchNodeTypes();
+            $parentNodeModel = TreeModel::findByPk($dc->activeRecord->pid);
+
+            if ($parentNodeModel && ($parentNodeType = $this->nodeTypeCollection->getNodeType($parentNodeModel->type))) {
+                $allowedNodeTypes = $parentNodeType::allowedChilds();
             }
         }
 
-		foreach ($nodeTypes as $nodeType)
-        {
-            if ($nodeType != $dc->value && $allowedNodeTypes && !in_array($nodeType, $allowedNodeTypes)) {
+        foreach ($nodeTypes as $nodeType) {
+            if ($nodeType != $dc->value && $allowedNodeTypes && !\in_array($nodeType, $allowedNodeTypes)) {
                 continue;
             }
 
             $arrOptions[] = $nodeType;
-		}
+        }
 
-		return $arrOptions;
-	}
+        return $arrOptions;
+    }
 
     /**
-     * Add an image to each page in the tree
+     * Add an image to each page in the tree.
      *
      * @param array         $row
      * @param string        $label
      * @param DataContainer $dc
      * @param string        $imageAttribute
-     * @param boolean       $blnReturnImage
-     * @param boolean       $blnProtected
+     * @param bool          $blnReturnImage
+     * @param bool          $blnProtected
      *
      * @return string
      */
-    public function onLabelCallback($row, $label, DataContainer $dc=null, $imageAttribute='', $blnReturnImage=false, $blnProtected=false)
+    public function onLabelCallback($row, $label, DataContainer $dc = null, $imageAttribute = '', $blnReturnImage = false, $blnProtected = false)
     {
         $nodeModel = TreeModel::findByPk($row['id']);
 
-        if ($blnProtected)
-        {
+        if ($blnProtected) {
             $row['protected'] = true;
         }
 
         $image = \Controller::getPageStatusIcon((object) $row);
-        $imageAttribute = trim($imageAttribute . ' data-icon="' . \Controller::getPageStatusIcon((object) array_merge($row, array('published'=>'1'))) . '" data-icon-disabled="' . \Controller::getPageStatusIcon((object) array_merge($row, array('published'=>''))) . '"');
+        $imageAttribute = trim($imageAttribute.' data-icon="'.\Controller::getPageStatusIcon((object) array_merge($row, ['published' => '1'])).'" data-icon-disabled="'.\Controller::getPageStatusIcon((object) array_merge($row, ['published' => ''])).'"');
 
         // Return the image only
-        if ($blnReturnImage)
-        {
+        if ($blnReturnImage) {
             return \Image::getHtml($image, '', $imageAttribute);
         }
 
         if ($nodeModel->isRootNode()) {
-            $label = '<span><strong>' . $row['internalTitle'] . '</strong> <br /> <span style="display: inline-block; margin-left: 20px; margin-top: 5px;">'.$label.'</span></span>';
+            $label = '<span><strong>'.$row['internalTitle'].'</strong> <br /> <span style="display: inline-block; margin-left: 20px; margin-top: 5px;">'.$label.'</span></span>';
         }
 
         return $label;
@@ -252,43 +233,38 @@ class TreeContainer
         // Return the image
         return
 //            '<a href="contao/main.php?do=feRedirect&amp;page=' . $row['id'] . '" title="' . \StringUtil::specialchars($GLOBALS['TL_LANG']['MSC']['view']) . '"' . (($dc->table != 'tl_page') ? ' class="tl_gray"' : '') . ' target="_blank">' .
-            \Image::getHtml($image, '', $imageAttribute) .
+            \Image::getHtml($image, '', $imageAttribute).
 //            '</a> ' .
             $label
             ;
     }
 
     /**
-	 * Check permissions to edit table tl_page
-	 *
-	 * @throws AccessDeniedException
-	 */
-	public function checkPermission(): void
-	{
-	    $user = BackendUser::getInstance();
-		if ($user->isAdmin)
-		{
-			return;
-		}
+     * Check permissions to edit table tl_page.
+     *
+     * @throws AccessDeniedException
+     */
+    public function checkPermission(): void
+    {
+        $user = BackendUser::getInstance();
+
+        if ($user->isAdmin) {
+            return;
+        }
 
         // entferne den hinzufügen button
         if (!$user->hasAccess('create', 'huh_treep')) {
-
             $GLOBALS['TL_DCA']['tl_tree']['config']['closed'] = true;
         }
         // entferne den hinzufügen button
         if ($user->hasAccess('createRoot', 'huh_treep')) {
-
             $GLOBALS['TL_DCA']['tl_tree']['list']['sorting']['rootPaste'] = true;
         }
 
         // Restrict the page tree
-        if (empty($user->rootNodeMounts) || !is_array($user->rootNodeMounts))
-        {
-            $root = array(0);
-        }
-        else
-        {
+        if (empty($user->rootNodeMounts) || !\is_array($user->rootNodeMounts)) {
+            $root = [0];
+        } else {
             $root = $user->rootNodeMounts;
         }
 
@@ -297,35 +273,31 @@ class TreeContainer
         $session = $this->session->all();
 
         // Set allowed page IDs (edit multiple)
-        if (is_array($session['CURRENT']['IDS']))
-        {
-            $edit_all = array();
-            $delete_all = array();
+        if (\is_array($session['CURRENT']['IDS'])) {
+            $edit_all = [];
+            $delete_all = [];
 
-            $stmt = $this->connection->prepare("SELECT id, pid, type FROM tl_tree WHERE id=? LIMIT 1");
-            foreach ($session['CURRENT']['IDS'] as $id)
-            {
+            $stmt = $this->connection->prepare('SELECT id, pid, type FROM tl_tree WHERE id=? LIMIT 1');
+
+            foreach ($session['CURRENT']['IDS'] as $id) {
                 $stmt->execute([$id]);
                 $nodeData = $stmt->fetch(FetchMode::STANDARD_OBJECT);
-
 
 //                $objPage = $this->Database->prepare("SELECT id, pid, type, includeChmod, chmod, cuser, cgroup FROM tl_page WHERE id=?")
 //                    ->limit(1)
 //                    ->execute($id);
 
 //                if ($objPage->numRows < 1 || !$user->hasAccess($objPage->type, 'alpty'))
-                if (!$nodeData)
-                {
+                if (!$nodeData) {
                     continue;
                 }
 
-                if ($this->hasAccess((int)$nodeData->id, $user, $root))
-                {
+                if ($this->hasAccess((int) $nodeData->id, $user, $root)) {
                     $edit_all[] = $id;
                 }
 
-                if ($nodeData->pid === 0) {
-                    if ($user->hasAccess('deleteRoot', 'huh_treep')){
+                if (0 === $nodeData->pid) {
+                    if ($user->hasAccess('deleteRoot', 'huh_treep')) {
                         $delete_all[] = $id;
                     }
                 } else {
@@ -335,17 +307,16 @@ class TreeContainer
                 }
             }
 
-            $session['CURRENT']['IDS'] = (Input::get('act') == 'deleteAll') ? $delete_all : $edit_all;
+            $session['CURRENT']['IDS'] = ('deleteAll' == Input::get('act')) ? $delete_all : $edit_all;
         }
 
         // Set allowed clipboard IDs
-        if (isset($session['CLIPBOARD']['tl_tree']) && is_array($session['CLIPBOARD']['tl_tree']['id']))
-        {
-            $clipboard = array();
+        if (isset($session['CLIPBOARD']['tl_tree']) && \is_array($session['CLIPBOARD']['tl_tree']['id'])) {
+            $clipboard = [];
 
             $stmt = $this->connection->prepare('SELECT id, pid, type FROM tl_tree WHERE id=? LIMIT 1');
-            foreach ($session['CLIPBOARD']['tl_tree']['id'] as $id)
-            {
+
+            foreach ($session['CLIPBOARD']['tl_tree']['id'] as $id) {
                 $stmt->execute([$id]);
                 $nodeData = $stmt->fetch(FetchMode::STANDARD_OBJECT);
 
@@ -353,8 +324,7 @@ class TreeContainer
 //                    ->limit(1)
 //                    ->execute($id);
 
-                if (!$nodeData)
-                {
+                if (!$nodeData) {
                     continue;
                 }
 
@@ -363,8 +333,7 @@ class TreeContainer
 //                    continue;
 //                }
 
-                if ($this->hasAccess((int)$nodeData->id, $user, $root))
-                {
+                if ($this->hasAccess((int) $nodeData->id, $user, $root)) {
                     $clipboard[] = $id;
                 }
             }
@@ -389,15 +358,13 @@ class TreeContainer
 //        }
 
         // Check current action
-        if (Input::get('act') && Input::get('act') != 'paste')
-        {
+        if (Input::get('act') && 'paste' != Input::get('act')) {
             $permission = 0;
             $cid = CURRENT_ID ?: Input::get('id');
-            $ids = ($cid != '') ? array($cid) : array();
+            $ids = ('' != $cid) ? [$cid] : [];
 
             // Set permission
-            switch (Input::get('act'))
-            {
+            switch (Input::get('act')) {
                 case 'edit':
                 case 'toggle':
 //                    $permission = BackendUser::CAN_EDIT_PAGE;
@@ -406,6 +373,7 @@ class TreeContainer
                 case 'move':
 //                    $permission = BackendUser::CAN_EDIT_PAGE_HIERARCHY;
                     $ids[] = Input::get('sid');
+
                     break;
 
                 case 'create':
@@ -416,33 +384,31 @@ class TreeContainer
                     $permission = BackendUser::CAN_EDIT_PAGE_HIERARCHY;
 
                     // Check the parent page in "paste into" mode
-                    if (Input::get('mode') == 2)
-                    {
+                    if (2 == Input::get('mode')) {
                         $ids[] = Input::get('pid');
                     }
                     // Check the parent's parent page in "paste after" mode
-                    else
-                    {
+                    else {
                         $stmt = $this->connection->prepare('SELECT pid FROM tl_tree WHERE id=?');
                         $stmt->execute([Input::get('pid')]);
                         $node = $stmt->fetch(FetchMode::STANDARD_OBJECT);
                         $ids[] = $node->pid;
                     }
+
                     break;
 
                 case 'delete':
                     $permission = BackendUser::CAN_DELETE_PAGE;
+
                     break;
             }
 
             // Check user permissions
-            $nodeMounts = array();
+            $nodeMounts = [];
 
             // Get all allowed pages for the current user
-            foreach ($user->rootNodeMounts as $rootMount)
-            {
-                if (Input::get('act') != 'delete')
-                {
+            foreach ($user->rootNodeMounts as $rootMount) {
+                if ('delete' != Input::get('act')) {
                     $nodeMounts[] = $rootMount;
                 }
 
@@ -456,22 +422,20 @@ class TreeContainer
 
             // Do not allow to paste after pages on the root level (pagemounts)
             if (
-                (Input::get('act') == 'cut' || Input::get('act') == 'cutAll')
-                && Input::get('mode') == 1
-                && in_array(Input::get('pid'), $contaoBackend->eliminateNestedPages($user->rootNodeMounts, 'tl_tree')))
-            {
-                throw new AccessDeniedException('Not enough permissions to paste tree element ID ' . Input::get('id') . ' after mounted tree element ID ' . Input::get('pid') . ' (root level).');
+                ('cut' == Input::get('act') || 'cutAll' == Input::get('act'))
+                && 1 == Input::get('mode')
+                && \in_array(Input::get('pid'), $contaoBackend->eliminateNestedPages($user->rootNodeMounts, 'tl_tree'))) {
+                throw new AccessDeniedException('Not enough permissions to paste tree element ID '.Input::get('id').' after mounted tree element ID '.Input::get('pid').' (root level).');
             }
 
-            $stmt = $this->connection->prepare("SELECT * FROM tl_tree WHERE id=? LIMIT 1");
+            $stmt = $this->connection->prepare('SELECT * FROM tl_tree WHERE id=? LIMIT 1');
             // Check each tree node element
-            foreach ($ids as $i=>$id)
-            {
-                if (!in_array($id, $nodeMounts))
-                {
+            foreach ($ids as $i => $id) {
+                if (!\in_array($id, $nodeMounts)) {
 //                    $this->log('Page ID ' . $id . ' was not mounted', __METHOD__, TL_ERROR);
 
                     $error = true;
+
                     break;
                 }
 
@@ -481,60 +445,57 @@ class TreeContainer
 //                    ->limit(1)
 //                    ->execute($id);
                 $nodeData = $stmt->fetch(FetchMode::STANDARD_OBJECT);
-                if (!$nodeData)
-                {
+
+                if (!$nodeData) {
                     continue;
                 }
 
                 // Check whether the current user is allowed to access the current page
 //                if (Input::get('act') != 'show' && !$this->User->isAllowed($permission, $nodeData->row()))
-                if (Input::get('act') != 'show' && !$this->hasAccess($nodeData->id, $user, $root))
-                {
+                if ('show' != Input::get('act') && !$this->hasAccess($nodeData->id, $user, $root)) {
                     $error = true;
+
                     break;
                 }
 
                 // Check the type of the first page (not the following parent pages)
                 // In "edit multiple" mode, $ids contains only the parent ID, therefore check $id != $_GET['pid'] (see #5620)
 //                if ($i == 0 && $id != Input::get('pid') && Input::get('act') != 'create' && !$user->hasAccess($nodeData->type, 'alpty'))
-                if ($i == 0 && $id != Input::get('pid') && Input::get('act') != 'create' && !$this->hasAccess($nodeData->id, $user, $root))
-                {
+                if (0 == $i && $id != Input::get('pid') && 'create' != Input::get('act') && !$this->hasAccess($nodeData->id, $user, $root)) {
 //                    $this->log('Not enough permissions to  ' . Input::get('act') . ' ' . $nodeData->type . ' pages', __METHOD__, TL_ERROR);
 
                     $error = true;
+
                     break;
                 }
             }
 
             // Redirect if there is an error
-            if ($error)
-            {
-                throw new AccessDeniedException('Not enough permissions to ' . Input::get('act') . ' tree node element with ID ' . $cid . ' or paste after/into tree node element with ID ' . Input::get('pid') . '.');
+            if ($error) {
+                throw new AccessDeniedException('Not enough permissions to '.Input::get('act').' tree node element with ID '.$cid.' or paste after/into tree node element with ID '.Input::get('pid').'.');
             }
         }
-
-        return;
-	}
+    }
 
     /**
-     * Return if user has access to the current node
+     * Return if user has access to the current node.
      *
      * @param TreeModel|int $currentNode
-     * @param BackendUser $user
-     * @param array $root
-     * @return bool
+     * @param BackendUser   $user
+     * @param array         $root
      */
-	public function hasAccess($currentNode, $user = null, ?array $root = null): bool
+    public function hasAccess($currentNode, $user = null, ?array $root = null): bool
     {
         if (is_numeric($currentNode)) {
             $currentNode = TreeModel::findByPk($currentNode);
         }
+
         if (!$currentNode instanceof TreeModel) {
             return false;
         }
         $rootNode = $currentNode;
-        if (!$currentNode->isRootNode())
-        {
+
+        if (!$currentNode->isRootNode()) {
             $rootNode = $currentNode->getRootNode();
         }
 
@@ -544,389 +505,344 @@ class TreeContainer
 
         if (!$root) {
             // Restrict the page tree
-            if (empty($user->rootNodeMounts) || !is_array($user->rootNodeMounts))
-            {
-                $root = array(0);
-            }
-            else
-            {
+            if (empty($user->rootNodeMounts) || !\is_array($user->rootNodeMounts)) {
+                $root = [0];
+            } else {
                 $root = $user->rootNodeMounts;
             }
         }
 
-        if (in_array($rootNode->id, $root))
-        {
+        if (\in_array($rootNode->id, $root)) {
             return true;
         }
+
         return false;
     }
 
     /**
-	 * Add the breadcrumb menu
-	 */
-	public function addBreadcrumb()
-	{
-		Backend::addPagesBreadcrumb();
-	}
-
-
-	/**
-	 * Return the paste tree element button
-	 *
-	 * @param DataContainer $dc
-	 * @param array         $row
-	 * @param string        $table
-	 * @param boolean       $cr
-	 * @param array         $arrClipboard
-	 *
-	 * @return string
-	 */
-	public function onPasteButtonCallback(DataContainer $dc, $row, $table, $cr, $arrClipboard=null)
-	{
-		$disablePA = false;
-		$disablePI = false;
-
-		$user = BackendUser::getInstance();
-
-		// Disable all buttons if there is a circular reference
-		if ($arrClipboard !== false && (($arrClipboard['mode'] == 'cut' && ($cr == 1 || $arrClipboard['id'] == $row['id'])) || ($arrClipboard['mode'] == 'cutAll' && ($cr == 1 || in_array($row['id'], $arrClipboard['id'])))))
-		{
-			$disablePA = true;
-			$disablePI = true;
-		}
-
-		// Prevent adding non-root pages on top-level
-		if (Input::get('mode') != 'create' && $row['pid'] == 0)
-		{
-		    $stmt = $this->connection->prepare("SELECT * FROM " . $table . " WHERE id=? LIMIT 1");
-		    $stmt->execute([Input::get('id')]);
-		    $objPage = $stmt->fetch(FetchMode::STANDARD_OBJECT);
-
-		    if (!$objPage || !$this->nodeTypeCollection->isRootType($objPage->type))
-			{
-				$disablePA = true;
-
-				if ($row['id'] == 0)
-				{
-					$disablePI = true;
-				}
-			}
-		}
-
-		// Check permissions if the user is not an administrator
-		if (!$user->isAdmin)
-		{
-			// Disable "paste into" button if there is no permission 2 (move) or 1 (create) for the current page
-			if (!$disablePI)
-			{
-
-//				if (!$user->isAllowed(BackendUser::CAN_EDIT_PAGE_HIERARCHY, $row) || (Input::get('mode') == 'create' && !$this->User->isAllowed(BackendUser::CAN_EDIT_PAGE, $row)))
-                if (!$this->hasAccess($row['id'], $user))
-				{
-					$disablePI = true;
-				}
-			}
-
-			$stmt = $this->connection->prepare("SELECT * FROM " . $table . " WHERE id=? LIMIT 1");
-			$stmt->execute([$row['pid']]);
-            $objPage = $stmt->fetch(FetchMode::STANDARD_OBJECT);
-
-			// Disable "paste after" button if there is no permission 2 (move) or 1 (create) for the parent page
-			if (!$disablePA && $objPage)
-			{
-//				if (!$user->isAllowed(BackendUser::CAN_EDIT_PAGE_HIERARCHY, $objPage->row()) || (Input::get('mode') == 'create' && !$this->User->isAllowed(BackendUser::CAN_EDIT_PAGE, $objPage->row())))
-				if (!$this->hasAccess($objPage->id, $user))
-				{
-					$disablePA = true;
-				}
-			}
-
-			// Disable "paste after" button if the parent page is a root page and the user is not an administrator
-//			if (!$disablePA && ($row['pid'] < 1 || in_array($row['id'], $dc->rootIds)))
-			if (!$disablePA && $row['pid'] < 1 && !$user->hasAccess('createRoot', 'huh_treep'))
-			{
-				$disablePA = true;
-			}
-		}
-
-		$return = '';
-
-		// Return the buttons
-		$imagePasteAfter = Image::getHtml('pasteafter.svg', sprintf($GLOBALS['TL_LANG'][$table]['pasteafter'][1], $row['id']));
-		$imagePasteInto = Image::getHtml('pasteinto.svg', sprintf($GLOBALS['TL_LANG'][$table]['pasteinto'][1], $row['id']));
-
-		if ($row['id'] > 0)
-		{
-			$return = $disablePA ? Image::getHtml('pasteafter_.svg') . ' ' : '<a href="' . Backend::addToUrl('act=' . $arrClipboard['mode'] . '&amp;mode=1&amp;pid=' . $row['id'] . (!is_array($arrClipboard['id']) ? '&amp;id=' . $arrClipboard['id'] : '')) . '" title="' . StringUtil::specialchars(sprintf($GLOBALS['TL_LANG'][$table]['pasteafter'][1], $row['id'])) . '" onclick="Backend.getScrollOffset()">' . $imagePasteAfter . '</a> ';
-		}
-
-		return $return . ($disablePI ? Image::getHtml('pasteinto_.svg') . ' ' : '<a href="' . Backend::addToUrl('act=' . $arrClipboard['mode'] . '&amp;mode=2&amp;pid=' . $row['id'] . (!is_array($arrClipboard['id']) ? '&amp;id=' . $arrClipboard['id'] : '')) . '" title="' . StringUtil::specialchars(sprintf($GLOBALS['TL_LANG'][$table]['pasteinto'][1], $row['id'])) . '" onclick="Backend.getScrollOffset()">' . $imagePasteInto . '</a> ');
-	}
-
-	/**
-	 * Return the copy page button
-	 *
-	 * @param array  $row
-	 * @param string $href
-	 * @param string $label
-	 * @param string $title
-	 * @param string $icon
-	 * @param string $attributes
-	 * @param string $table
-	 *
-	 * @return string
-	 */
-	public function onCopyButtonCallback($row, $href, $label, $title, $icon, $attributes, $table)
-	{
-		if ($GLOBALS['TL_DCA'][$table]['config']['closed'])
-		{
-			return '';
-		}
-
-		$user = BackendUser::getInstance();
-
-//		return ($this->User->hasAccess($row['type'], 'alpty') && $this->User->isAllowed(BackendUser::CAN_EDIT_PAGE_HIERARCHY, $row)) ? '<a href="' . $this->addToUrl($href . '&amp;id=' . $row['id']) . '" title="' . StringUtil::specialchars($title) . '"' . $attributes . '>' . Image::getHtml($icon, $label) . '</a> ' : Image::getHtml(preg_replace('/\.svg$/i', '_.svg', $icon)) . ' ';
-		return ($this->hasAccess($row['id'], $user)) ? '<a href="' . Backend::addToUrl($href . '&amp;id=' . $row['id']) . '" title="' . StringUtil::specialchars($title) . '"' . $attributes . '>' . Image::getHtml($icon, $label) . '</a> ' : Image::getHtml(preg_replace('/\.svg$/i', '_.svg', $icon)) . ' ';
-	}
-
-	/**
-	 * Return the copy page with subpages button
-	 *
-	 * @param array  $row
-	 * @param string $href
-	 * @param string $label
-	 * @param string $title
-	 * @param string $icon
-	 * @param string $attributes
-	 * @param string $table
-	 *
-	 * @return string
-	 */
-	public function onCopyChildsButtonCallback($row, $href, $label, $title, $icon, $attributes, $table)
-	{
-		if ($GLOBALS['TL_DCA'][$table]['config']['closed'])
-		{
-			return '';
-		}
-
-		$stmt = $this->connection->prepare("SELECT * FROM tl_tree WHERE pid=? LIMIT 1");
-		$stmt->execute([$row['id']]);
-		$childNodes = $stmt->fetch(FetchMode::STANDARD_OBJECT);
-
-//		return ($childNodes->numRows && $this->User->hasAccess($row['type'], 'alpty') && $this->User->isAllowed(BackendUser::CAN_EDIT_PAGE_HIERARCHY, $row)) ? '<a href="' . $this->addToUrl($href . '&amp;id=' . $row['id']) . '" title="' . StringUtil::specialchars($title) . '"' . $attributes . '>' . Image::getHtml($icon, $label) . '</a> ' : Image::getHtml(preg_replace('/\.svg$/i', '_.svg', $icon)) . ' ';
-		return ($childNodes && $this->hasAccess($row['id'])) ? '<a href="' . Backend::addToUrl($href . '&amp;id=' . $row['id']) . '" title="' . StringUtil::specialchars($title) . '"' . $attributes . '>' . Image::getHtml($icon, $label) . '</a> ' : Image::getHtml(preg_replace('/\.svg$/i', '_.svg', $icon)) . ' ';
-	}
+     * Add the breadcrumb menu.
+     */
+    public function addBreadcrumb()
+    {
+        Backend::addPagesBreadcrumb();
+    }
 
     /**
-	 * Return the cut page button
-	 *
-	 * @param array  $row
-	 * @param string $href
-	 * @param string $label
-	 * @param string $title
-	 * @param string $icon
-	 * @param string $attributes
-	 *
-	 * @return string
-	 */
-	public function onCutButtonCallback($row, $href, $label, $title, $icon, $attributes)
-	{
-//		return ($this->User->hasAccess($row['type'], 'alpty') && $this->User->isAllowed(BackendUser::CAN_EDIT_PAGE_HIERARCHY, $row)) ? '<a href="' . $this->addToUrl($href . '&amp;id=' . $row['id']) . '" title="' . StringUtil::specialchars($title) . '"' . $attributes . '>' . Image::getHtml($icon, $label) . '</a> ' : Image::getHtml(preg_replace('/\.svg$/i', '_.svg', $icon)) . ' ';
-		return ($this->hasAccess($row['id'])) ? '<a href="' . Backend::addToUrl($href . '&amp;id=' . $row['id']) . '" title="' . StringUtil::specialchars($title) . '"' . $attributes . '>' . Image::getHtml($icon, $label) . '</a> ' : ' ';
-	}
-
-    /**
-	 * Return the edit tree node button
-	 *
-	 * @param array  $row
-	 * @param string $href
-	 * @param string $label
-	 * @param string $title
-	 * @param string $icon
-	 * @param string $attributes
-	 *
-	 * @return string
-	 */
-	public function onEditButtonCallback($row, $href, $label, $title, $icon, $attributes)
-	{
-//		return ($this->User->hasAccess($row['type'], 'alpty') && $this->User->isAllowed(BackendUser::CAN_EDIT_PAGE, $row)) ? '<a href="' . $this->addToUrl($href . '&amp;id=' . $row['id']) . '" title="' . StringUtil::specialchars($title) . '"' . $attributes . '>' . Image::getHtml($icon, $label) . '</a> ' : Image::getHtml(preg_replace('/\.svg$/i', '_.svg', $icon)) . ' ';
-		return ($this->hasAccess($row['id'])) ? '<a href="' . Backend::addToUrl($href . '&amp;id=' . $row['id']) . '" title="' . StringUtil::specialchars($title) . '"' . $attributes . '>' . Image::getHtml($icon, $label) . '</a> ' : Image::getHtml(preg_replace('/\.svg$/i', '_.svg', $icon)) . ' ';
-	}
-
-    /**
-	 * Return the delete tree node button
-	 *
-	 * @param array  $row
-	 * @param string $href
-	 * @param string $label
-	 * @param string $title
-	 * @param string $icon
-	 * @param string $attributes
-	 *
-	 * @return string
-	 */
-	public function onDeleteButtonCallback($row, $href, $label, $title, $icon, $attributes)
-	{
-//		$root = func_get_arg(7);
-
-		$user = BackendUser::getInstance();
-
-//		return ($this->User->hasAccess($row['type'], 'alpty') && $this->User->isAllowed(BackendUser::CAN_DELETE_PAGE, $row) && ($this->User->isAdmin || !in_array($row['id'], $root))) ? '<a href="' . $this->addToUrl($href . '&amp;id=' . $row['id']) . '" title="' . StringUtil::specialchars($title) . '"' . $attributes . '>' . Image::getHtml($icon, $label) . '</a> ' : Image::getHtml(preg_replace('/\.svg$/i', '_.svg', $icon)) . ' ';
-		return (($row['pid'] == 0 && $user->hasAccess('deleteRoot', 'huh_treep')) || ($row['pid'] != 0 && $user->hasAccess('delete', 'huh_treep'))) ? '<a href="' . Backend::addToUrl($href . '&amp;id=' . $row['id']) . '" title="' . StringUtil::specialchars($title) . '"' . $attributes . '>' . Image::getHtml($icon, $label) . '</a> ' : Image::getHtml(preg_replace('/\.svg$/i', '_.svg', $icon)) . ' ';
-	}
-
-	/**
-	 * Return the "toggle visibility" button
-	 *
-	 * @param array  $row
-	 * @param string $href
-	 * @param string $label
-	 * @param string $title
-	 * @param string $icon
-	 * @param string $attributes
-	 *
-	 * @return string
-	 */
-	public function onToggleButtonCallback($row, $href, $label, $title, $icon, $attributes): string
-	{
-		if (strlen(Input::get('tid')))
-		{
-			$this->toggleVisibility(Input::get('tid'), (Input::get('state') == 1), (@func_get_arg(12) ?: null));
-			Backend::redirect(Backend::getReferer());
-		}
-
-		$user = BackendUser::getInstance();
-
-		// Check permissions AFTER checking the tid, so hacking attempts are logged
-		if (!$user->hasAccess('tl_tree::published', 'alexf'))
-		{
-			return '';
-		}
-
-		$href .= '&amp;tid=' . $row['id'] . '&amp;state=' . ($row['published'] ? '' : 1);
-
-		if (!$row['published'])
-		{
-			$icon = 'invisible.svg';
-		}
-
-//		$stmt = $this->connection->prepare("SELECT * FROM tl_page WHERE id=? LIMIT 1");
-//		$stmt->execute([$row['id']]);
-//		$objPage = $stmt->fetch(FetchMode::ASSOCIATIVE);
-//
-//		if (!$this->User->hasAccess($row['type'], 'alpty') || !$this->User->isAllowed(BackendUser::CAN_EDIT_PAGE, $objPage->row()))
-        if (!$this->hasAccess($row['id'], $user))
-		{
-			return Image::getHtml($icon) . ' ';
-		}
-
-		return '<a href="' . Backend::addToUrl($href) . '" title="' . StringUtil::specialchars($title) . '"' . $attributes . '>' . Image::getHtml($icon, $label, 'data-state="' . ($row['published'] ? 1 : 0) . '"') . '</a> ';
-	}
-
-	/**
-	 * Disable/enable a user group
-	 *
-	 * @param integer       $intId
-	 * @param boolean       $blnVisible
-	 * @param DataContainer $dc
-	 *
-	 * @throws AccessDeniedException
-	 */
-	public function toggleVisibility($intId, $blnVisible, DataContainer $dc=null)
-	{
-		// Set the ID and action
-		Input::setGet('id', $intId);
-		Input::setGet('act', 'toggle');
-
-		if ($dc)
-		{
-			$dc->id = $intId; // see #8043
-		}
-
-		// Trigger the onload_callback
-		if (is_array($GLOBALS['TL_DCA']['tl_tree']['config']['onload_callback']))
-		{
-			foreach ($GLOBALS['TL_DCA']['tl_tree']['config']['onload_callback'] as $callback)
-			{
-				if (is_array($callback))
-				{
-					System::importStatic($callback[0])->{$callback[1]}($dc);
-				}
-				elseif (is_callable($callback))
-				{
-					$callback($dc);
-				}
-			}
-		}
+     * Return the paste tree element button.
+     *
+     * @param array  $row
+     * @param string $table
+     * @param bool   $cr
+     * @param array  $arrClipboard
+     *
+     * @return string
+     */
+    public function onPasteButtonCallback(DataContainer $dc, $row, $table, $cr, $arrClipboard = null)
+    {
+        $disablePA = false;
+        $disablePI = false;
 
         $user = BackendUser::getInstance();
 
-		// Check the field access
-		if (!$user->hasAccess('tl_tree::published', 'alexf'))
-		{
-			throw new AccessDeniedException('Not enough permissions to publish/unpublish tree element ID ' . $intId . '.');
-		}
+        // Disable all buttons if there is a circular reference
+        if (false !== $arrClipboard && (('cut' == $arrClipboard['mode'] && (1 == $cr || $arrClipboard['id'] == $row['id'])) || ('cutAll' == $arrClipboard['mode'] && (1 == $cr || \in_array($row['id'], $arrClipboard['id']))))) {
+            $disablePA = true;
+            $disablePI = true;
+        }
 
-		// Set the current record
-		if ($dc)
-		{
-		    $stmt = $this->connection->prepare("SELECT * FROM tl_tree WHERE id=? LIMIT 1");
-		    $stmt->execute([$intId]);
-		    $objRow = $stmt->fetch(FetchMode::STANDARD_OBJECT);
+        // Prevent adding non-root pages on top-level
+        if ('create' != Input::get('mode') && 0 == $row['pid']) {
+            $stmt = $this->connection->prepare('SELECT * FROM '.$table.' WHERE id=? LIMIT 1');
+            $stmt->execute([Input::get('id')]);
+            $objPage = $stmt->fetch(FetchMode::STANDARD_OBJECT);
 
-			if ($objRow)
-			{
-				$dc->activeRecord = $objRow;
-			}
-		}
+            if (!$objPage || !$this->nodeTypeCollection->isRootType($objPage->type)) {
+                $disablePA = true;
 
-		$objVersions = new Versions('tl_tree', $intId);
-		$objVersions->initialize();
+                if (0 == $row['id']) {
+                    $disablePI = true;
+                }
+            }
+        }
 
-		// Trigger the save_callback
-		if (is_array($GLOBALS['TL_DCA']['tl_tree']['fields']['published']['save_callback']))
-		{
-			foreach ($GLOBALS['TL_DCA']['tl_tree']['fields']['published']['save_callback'] as $callback)
-			{
-				if (is_array($callback))
-				{
+        // Check permissions if the user is not an administrator
+        if (!$user->isAdmin) {
+            // Disable "paste into" button if there is no permission 2 (move) or 1 (create) for the current page
+            if (!$disablePI) {
+                //				if (!$user->isAllowed(BackendUser::CAN_EDIT_PAGE_HIERARCHY, $row) || (Input::get('mode') == 'create' && !$this->User->isAllowed(BackendUser::CAN_EDIT_PAGE, $row)))
+                if (!$this->hasAccess($row['id'], $user)) {
+                    $disablePI = true;
+                }
+            }
+
+            $stmt = $this->connection->prepare('SELECT * FROM '.$table.' WHERE id=? LIMIT 1');
+            $stmt->execute([$row['pid']]);
+            $objPage = $stmt->fetch(FetchMode::STANDARD_OBJECT);
+
+            // Disable "paste after" button if there is no permission 2 (move) or 1 (create) for the parent page
+            if (!$disablePA && $objPage) {
+                //				if (!$user->isAllowed(BackendUser::CAN_EDIT_PAGE_HIERARCHY, $objPage->row()) || (Input::get('mode') == 'create' && !$this->User->isAllowed(BackendUser::CAN_EDIT_PAGE, $objPage->row())))
+                if (!$this->hasAccess($objPage->id, $user)) {
+                    $disablePA = true;
+                }
+            }
+
+            // Disable "paste after" button if the parent page is a root page and the user is not an administrator
+            //			if (!$disablePA && ($row['pid'] < 1 || in_array($row['id'], $dc->rootIds)))
+            if (!$disablePA && $row['pid'] < 1 && !$user->hasAccess('createRoot', 'huh_treep')) {
+                $disablePA = true;
+            }
+        }
+
+        $return = '';
+
+        // Return the buttons
+        $imagePasteAfter = Image::getHtml('pasteafter.svg', sprintf($GLOBALS['TL_LANG'][$table]['pasteafter'][1], $row['id']));
+        $imagePasteInto = Image::getHtml('pasteinto.svg', sprintf($GLOBALS['TL_LANG'][$table]['pasteinto'][1], $row['id']));
+
+        if ($row['id'] > 0) {
+            $return = $disablePA ? Image::getHtml('pasteafter_.svg').' ' : '<a href="'.Backend::addToUrl('act='.$arrClipboard['mode'].'&amp;mode=1&amp;pid='.$row['id'].(!\is_array($arrClipboard['id']) ? '&amp;id='.$arrClipboard['id'] : '')).'" title="'.StringUtil::specialchars(sprintf($GLOBALS['TL_LANG'][$table]['pasteafter'][1], $row['id'])).'" onclick="Backend.getScrollOffset()">'.$imagePasteAfter.'</a> ';
+        }
+
+        return $return.($disablePI ? Image::getHtml('pasteinto_.svg').' ' : '<a href="'.Backend::addToUrl('act='.$arrClipboard['mode'].'&amp;mode=2&amp;pid='.$row['id'].(!\is_array($arrClipboard['id']) ? '&amp;id='.$arrClipboard['id'] : '')).'" title="'.StringUtil::specialchars(sprintf($GLOBALS['TL_LANG'][$table]['pasteinto'][1], $row['id'])).'" onclick="Backend.getScrollOffset()">'.$imagePasteInto.'</a> ');
+    }
+
+    /**
+     * Return the copy page button.
+     *
+     * @param array  $row
+     * @param string $href
+     * @param string $label
+     * @param string $title
+     * @param string $icon
+     * @param string $attributes
+     * @param string $table
+     *
+     * @return string
+     */
+    public function onCopyButtonCallback($row, $href, $label, $title, $icon, $attributes, $table)
+    {
+        if ($GLOBALS['TL_DCA'][$table]['config']['closed']) {
+            return '';
+        }
+
+        $user = BackendUser::getInstance();
+
+        //		return ($this->User->hasAccess($row['type'], 'alpty') && $this->User->isAllowed(BackendUser::CAN_EDIT_PAGE_HIERARCHY, $row)) ? '<a href="' . $this->addToUrl($href . '&amp;id=' . $row['id']) . '" title="' . StringUtil::specialchars($title) . '"' . $attributes . '>' . Image::getHtml($icon, $label) . '</a> ' : Image::getHtml(preg_replace('/\.svg$/i', '_.svg', $icon)) . ' ';
+        return ($this->hasAccess($row['id'], $user)) ? '<a href="'.Backend::addToUrl($href.'&amp;id='.$row['id']).'" title="'.StringUtil::specialchars($title).'"'.$attributes.'>'.Image::getHtml($icon, $label).'</a> ' : Image::getHtml(preg_replace('/\.svg$/i', '_.svg', $icon)).' ';
+    }
+
+    /**
+     * Return the copy page with subpages button.
+     *
+     * @param array  $row
+     * @param string $href
+     * @param string $label
+     * @param string $title
+     * @param string $icon
+     * @param string $attributes
+     * @param string $table
+     *
+     * @return string
+     */
+    public function onCopyChildsButtonCallback($row, $href, $label, $title, $icon, $attributes, $table)
+    {
+        if ($GLOBALS['TL_DCA'][$table]['config']['closed']) {
+            return '';
+        }
+
+        $stmt = $this->connection->prepare('SELECT * FROM tl_tree WHERE pid=? LIMIT 1');
+        $stmt->execute([$row['id']]);
+        $childNodes = $stmt->fetch(FetchMode::STANDARD_OBJECT);
+
+        //		return ($childNodes->numRows && $this->User->hasAccess($row['type'], 'alpty') && $this->User->isAllowed(BackendUser::CAN_EDIT_PAGE_HIERARCHY, $row)) ? '<a href="' . $this->addToUrl($href . '&amp;id=' . $row['id']) . '" title="' . StringUtil::specialchars($title) . '"' . $attributes . '>' . Image::getHtml($icon, $label) . '</a> ' : Image::getHtml(preg_replace('/\.svg$/i', '_.svg', $icon)) . ' ';
+        return ($childNodes && $this->hasAccess($row['id'])) ? '<a href="'.Backend::addToUrl($href.'&amp;id='.$row['id']).'" title="'.StringUtil::specialchars($title).'"'.$attributes.'>'.Image::getHtml($icon, $label).'</a> ' : Image::getHtml(preg_replace('/\.svg$/i', '_.svg', $icon)).' ';
+    }
+
+    /**
+     * Return the cut page button.
+     *
+     * @param array  $row
+     * @param string $href
+     * @param string $label
+     * @param string $title
+     * @param string $icon
+     * @param string $attributes
+     *
+     * @return string
+     */
+    public function onCutButtonCallback($row, $href, $label, $title, $icon, $attributes)
+    {
+        //		return ($this->User->hasAccess($row['type'], 'alpty') && $this->User->isAllowed(BackendUser::CAN_EDIT_PAGE_HIERARCHY, $row)) ? '<a href="' . $this->addToUrl($href . '&amp;id=' . $row['id']) . '" title="' . StringUtil::specialchars($title) . '"' . $attributes . '>' . Image::getHtml($icon, $label) . '</a> ' : Image::getHtml(preg_replace('/\.svg$/i', '_.svg', $icon)) . ' ';
+        return ($this->hasAccess($row['id'])) ? '<a href="'.Backend::addToUrl($href.'&amp;id='.$row['id']).'" title="'.StringUtil::specialchars($title).'"'.$attributes.'>'.Image::getHtml($icon, $label).'</a> ' : ' ';
+    }
+
+    /**
+     * Return the edit tree node button.
+     *
+     * @param array  $row
+     * @param string $href
+     * @param string $label
+     * @param string $title
+     * @param string $icon
+     * @param string $attributes
+     *
+     * @return string
+     */
+    public function onEditButtonCallback($row, $href, $label, $title, $icon, $attributes)
+    {
+        //		return ($this->User->hasAccess($row['type'], 'alpty') && $this->User->isAllowed(BackendUser::CAN_EDIT_PAGE, $row)) ? '<a href="' . $this->addToUrl($href . '&amp;id=' . $row['id']) . '" title="' . StringUtil::specialchars($title) . '"' . $attributes . '>' . Image::getHtml($icon, $label) . '</a> ' : Image::getHtml(preg_replace('/\.svg$/i', '_.svg', $icon)) . ' ';
+        return ($this->hasAccess($row['id'])) ? '<a href="'.Backend::addToUrl($href.'&amp;id='.$row['id']).'" title="'.StringUtil::specialchars($title).'"'.$attributes.'>'.Image::getHtml($icon, $label).'</a> ' : Image::getHtml(preg_replace('/\.svg$/i', '_.svg', $icon)).' ';
+    }
+
+    /**
+     * Return the delete tree node button.
+     *
+     * @param array  $row
+     * @param string $href
+     * @param string $label
+     * @param string $title
+     * @param string $icon
+     * @param string $attributes
+     *
+     * @return string
+     */
+    public function onDeleteButtonCallback($row, $href, $label, $title, $icon, $attributes)
+    {
+        //		$root = func_get_arg(7);
+
+        $user = BackendUser::getInstance();
+
+        //		return ($this->User->hasAccess($row['type'], 'alpty') && $this->User->isAllowed(BackendUser::CAN_DELETE_PAGE, $row) && ($this->User->isAdmin || !in_array($row['id'], $root))) ? '<a href="' . $this->addToUrl($href . '&amp;id=' . $row['id']) . '" title="' . StringUtil::specialchars($title) . '"' . $attributes . '>' . Image::getHtml($icon, $label) . '</a> ' : Image::getHtml(preg_replace('/\.svg$/i', '_.svg', $icon)) . ' ';
+        return ((0 == $row['pid'] && $user->hasAccess('deleteRoot', 'huh_treep')) || (0 != $row['pid'] && $user->hasAccess('delete', 'huh_treep'))) ? '<a href="'.Backend::addToUrl($href.'&amp;id='.$row['id']).'" title="'.StringUtil::specialchars($title).'"'.$attributes.'>'.Image::getHtml($icon, $label).'</a> ' : Image::getHtml(preg_replace('/\.svg$/i', '_.svg', $icon)).' ';
+    }
+
+    /**
+     * Return the "toggle visibility" button.
+     *
+     * @param array  $row
+     * @param string $href
+     * @param string $label
+     * @param string $title
+     * @param string $icon
+     * @param string $attributes
+     */
+    public function onToggleButtonCallback($row, $href, $label, $title, $icon, $attributes): string
+    {
+        if (\strlen(Input::get('tid'))) {
+            $this->toggleVisibility(Input::get('tid'), (1 == Input::get('state')), (@func_get_arg(12) ?: null));
+            Backend::redirect(Backend::getReferer());
+        }
+
+        $user = BackendUser::getInstance();
+
+        // Check permissions AFTER checking the tid, so hacking attempts are logged
+        if (!$user->hasAccess('tl_tree::published', 'alexf')) {
+            return '';
+        }
+
+        $href .= '&amp;tid='.$row['id'].'&amp;state='.($row['published'] ? '' : 1);
+
+        if (!$row['published']) {
+            $icon = 'invisible.svg';
+        }
+
+        //		$stmt = $this->connection->prepare("SELECT * FROM tl_page WHERE id=? LIMIT 1");
+        //		$stmt->execute([$row['id']]);
+        //		$objPage = $stmt->fetch(FetchMode::ASSOCIATIVE);
+//
+        //		if (!$this->User->hasAccess($row['type'], 'alpty') || !$this->User->isAllowed(BackendUser::CAN_EDIT_PAGE, $objPage->row()))
+        if (!$this->hasAccess($row['id'], $user)) {
+            return Image::getHtml($icon).' ';
+        }
+
+        return '<a href="'.Backend::addToUrl($href).'" title="'.StringUtil::specialchars($title).'"'.$attributes.'>'.Image::getHtml($icon, $label, 'data-state="'.($row['published'] ? 1 : 0).'"').'</a> ';
+    }
+
+    /**
+     * Disable/enable a user group.
+     *
+     * @param int           $intId
+     * @param bool          $blnVisible
+     * @param DataContainer $dc
+     *
+     * @throws AccessDeniedException
+     */
+    public function toggleVisibility($intId, $blnVisible, DataContainer $dc = null)
+    {
+        // Set the ID and action
+        Input::setGet('id', $intId);
+        Input::setGet('act', 'toggle');
+
+        if ($dc) {
+            $dc->id = $intId; // see #8043
+        }
+
+        // Trigger the onload_callback
+        if (\is_array($GLOBALS['TL_DCA']['tl_tree']['config']['onload_callback'])) {
+            foreach ($GLOBALS['TL_DCA']['tl_tree']['config']['onload_callback'] as $callback) {
+                if (\is_array($callback)) {
+                    System::importStatic($callback[0])->{$callback[1]}($dc);
+                } elseif (\is_callable($callback)) {
+                    $callback($dc);
+                }
+            }
+        }
+
+        $user = BackendUser::getInstance();
+
+        // Check the field access
+        if (!$user->hasAccess('tl_tree::published', 'alexf')) {
+            throw new AccessDeniedException('Not enough permissions to publish/unpublish tree element ID '.$intId.'.');
+        }
+
+        // Set the current record
+        if ($dc) {
+            $stmt = $this->connection->prepare('SELECT * FROM tl_tree WHERE id=? LIMIT 1');
+            $stmt->execute([$intId]);
+            $objRow = $stmt->fetch(FetchMode::STANDARD_OBJECT);
+
+            if ($objRow) {
+                $dc->activeRecord = $objRow;
+            }
+        }
+
+        $objVersions = new Versions('tl_tree', $intId);
+        $objVersions->initialize();
+
+        // Trigger the save_callback
+        if (\is_array($GLOBALS['TL_DCA']['tl_tree']['fields']['published']['save_callback'])) {
+            foreach ($GLOBALS['TL_DCA']['tl_tree']['fields']['published']['save_callback'] as $callback) {
+                if (\is_array($callback)) {
                     $blnVisible = System::importStatic($callback[0])->{$callback[1]}($blnVisible, $dc);
-				}
-				elseif (is_callable($callback))
-				{
-					$blnVisible = $callback($blnVisible, $dc);
-				}
-			}
-		}
+                } elseif (\is_callable($callback)) {
+                    $blnVisible = $callback($blnVisible, $dc);
+                }
+            }
+        }
 
-		$time = time();
+        $time = time();
 
-		// Update the database
-        $stmt = $this->connection->prepare("UPDATE tl_tree SET tstamp=$time, published='" . ($blnVisible ? '1' : '') . "' WHERE id=?");
+        // Update the database
+        $stmt = $this->connection->prepare("UPDATE tl_tree SET tstamp=$time, published='".($blnVisible ? '1' : '')."' WHERE id=?");
         $stmt->execute([$intId]);
 
-		if ($dc)
-		{
-			$dc->activeRecord->tstamp = $time;
-			$dc->activeRecord->published = ($blnVisible ? '1' : '');
-		}
+        if ($dc) {
+            $dc->activeRecord->tstamp = $time;
+            $dc->activeRecord->published = ($blnVisible ? '1' : '');
+        }
 
-		// Trigger the onsubmit_callback
-		if (is_array($GLOBALS['TL_DCA']['tl_tree']['config']['onsubmit_callback']))
-		{
-			foreach ($GLOBALS['TL_DCA']['tl_tree']['config']['onsubmit_callback'] as $callback)
-			{
-				if (is_array($callback))
-				{
-					System::importStatic($callback[0])->{$callback[1]}($dc);
-				}
-				elseif (is_callable($callback))
-				{
-					$callback($dc);
-				}
-			}
-		}
+        // Trigger the onsubmit_callback
+        if (\is_array($GLOBALS['TL_DCA']['tl_tree']['config']['onsubmit_callback'])) {
+            foreach ($GLOBALS['TL_DCA']['tl_tree']['config']['onsubmit_callback'] as $callback) {
+                if (\is_array($callback)) {
+                    System::importStatic($callback[0])->{$callback[1]}($dc);
+                } elseif (\is_callable($callback)) {
+                    $callback($dc);
+                }
+            }
+        }
 
-		$objVersions->create();
-	}
+        $objVersions->create();
+    }
 }
