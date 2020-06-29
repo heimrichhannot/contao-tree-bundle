@@ -14,9 +14,9 @@ namespace HeimrichHannot\TreeBundle\TreeNode;
 abstract class AbstractTreeNode
 {
     const PREPEND_PALETTE = '{type_legend},title,alias,type;';
-    const APPEND_PALETTE  = '{publish_legend},published,start,stop;';
+    const APPEND_PALETTE = '{publish_legend},published,start,stop;';
 
-    const ICON_STATE_PUBLISHED   = 0;
+    const ICON_STATE_PUBLISHED = 0;
     const ICON_STATE_UNPUBLISHED = 1;
 
     protected $iconHidden = 'bundles/heimrichhannottree/img/backend/node_hidden.svg';
@@ -53,27 +53,26 @@ abstract class AbstractTreeNode
     }
 
     /**
-     * Return the node palette including legends.
-     *
-     * "{title_legend},title,alias,type;" is always prepended, so don't add it here.
-     */
-    abstract protected function getPalette(): string;
-
-    /**
      * Return tree node type icon.
      * You can return different icons based on given state.
      * Use AbstractTreeNode::ICON_STATE_* constants for evaluation passed status.
-     *
-     * @return string
      */
     public function getIcon(string $status): string
     {
         switch ($status) {
             case static::ICON_STATE_UNPUBLISHED:
                 return $this->iconHidden;
+
             case static::ICON_STATE_PUBLISHED:
             default:
                 return $this->iconPublished;
         }
     }
+
+    /**
+     * Return the node palette including legends.
+     *
+     * "{title_legend},title,alias,type;" is always prepended, so don't add it here.
+     */
+    abstract protected function getPalette(): string;
 }

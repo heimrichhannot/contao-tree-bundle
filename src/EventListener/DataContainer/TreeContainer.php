@@ -9,7 +9,6 @@
 namespace HeimrichHannot\TreeBundle\EventListener\DataContainer;
 
 use Contao\BackendUser;
-use Contao\Controller;
 use Contao\CoreBundle\Exception\AccessDeniedException;
 use Contao\Database;
 use Contao\DataContainer;
@@ -207,7 +206,7 @@ class TreeContainer
 
         $time = \Date::floorToMinute();
 
-        $published = (($row['start'] == '' || $row['start'] <= $time) && ($row['stop'] == '' || $row['stop'] > ($time + 60)) && $row['published'] == '1');
+        $published = (('' == $row['start'] || $row['start'] <= $time) && ('' == $row['stop'] || $row['stop'] > ($time + 60)) && '1' == $row['published']);
 
         $image = $nodeType->getIcon($published ? AbstractTreeNode::ICON_STATE_PUBLISHED : AbstractTreeNode::ICON_STATE_UNPUBLISHED);
 
@@ -475,6 +474,7 @@ class TreeContainer
         if (!$user) {
             $user = BackendUser::getInstance();
         }
+
         if ($user->isAdmin) {
             return true;
         }
