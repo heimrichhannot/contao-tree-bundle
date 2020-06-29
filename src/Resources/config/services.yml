@@ -12,3 +12,5 @@ services:
 
   HeimrichHannot\TreeBundle\Collection\NodeTypeCollection:
     arguments: [!tagged huh.tree.node_type]
+
+  HeimrichHannot\TreeBundle\Generator\TreeGenerator: ~

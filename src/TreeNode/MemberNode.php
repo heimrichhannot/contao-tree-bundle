@@ -8,6 +8,8 @@
 
 namespace HeimrichHannot\TreeBundle\TreeNode;
 
+use HeimrichHannot\TreeBundle\Model\TreeModel;
+
 class MemberNode extends AbstractTreeNode
 {
     protected $iconHidden = 'member_.svg';
@@ -21,5 +23,11 @@ class MemberNode extends AbstractTreeNode
     protected function getPalette(): string
     {
         return '{content_legend},member,description;';
+    }
+
+    public function prepareNodeOutput(array $context, TreeModel $nodeModel): array
+    {
+
+        return $context;
     }
 }

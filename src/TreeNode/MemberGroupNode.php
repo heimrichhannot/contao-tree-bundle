@@ -8,8 +8,13 @@
 
 namespace HeimrichHannot\TreeBundle\TreeNode;
 
+use HeimrichHannot\TreeBundle\Model\TreeModel;
+
 class MemberGroupNode extends AbstractTreeNode
 {
+    protected $iconHidden = 'mgroup_.svg';
+    protected $iconPublished = 'mgroup.svg';
+
     public static function getType(): string
     {
         return 'member_group_node';
@@ -18,5 +23,10 @@ class MemberGroupNode extends AbstractTreeNode
     protected function getPalette(): string
     {
         return '{content_legend},groups,description;';
+    }
+
+    public function prepareNodeOutput(array $context, TreeModel $nodeModel): array
+    {
+        return $context;
     }
 }

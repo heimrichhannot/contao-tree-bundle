@@ -74,4 +74,17 @@ class TreeModel extends Model
 
         return static::createCollection($arrModels, 'tl_tree');
     }
+
+    public static function findPublishedRootNodes($options)
+    {
+        $t = static::$strTable;
+        $columns = ['pid=0'];
+        if (!static::isPreviewMode($options))
+        {
+            $time = \Date::floorToMinute();
+            $columns[] = "($t.start='' OR $t.start<='$time') AND ($t.stop='' OR $t.stop>'" . ($time + 60) . "') AND $t.published='1'";
+        }
+
+        return static::findBy($columns, null, $options);
+    }
 }

@@ -8,6 +8,8 @@
 
 namespace HeimrichHannot\TreeBundle\TreeNode;
 
+use HeimrichHannot\TreeBundle\Model\TreeModel;
+
 /**
  * This interface must be implemented by tree nodes.
  */
@@ -75,4 +77,12 @@ abstract class AbstractTreeNode
      * "{title_legend},title,alias,type;" is always prepended, so don't add it here.
      */
     abstract protected function getPalette(): string;
+
+    /**
+     * Prepare the node context before rendering the node template.
+     *
+     * @param array $context
+     * @return array
+     */
+    abstract public function prepareNodeOutput(array $context, TreeModel $nodeModel): array;
 }

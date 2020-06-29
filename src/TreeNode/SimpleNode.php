@@ -8,6 +8,8 @@
 
 namespace HeimrichHannot\TreeBundle\TreeNode;
 
+use HeimrichHannot\TreeBundle\Model\TreeModel;
+
 class SimpleNode extends AbstractTreeNode
 {
     public static function getType(): string
@@ -18,5 +20,10 @@ class SimpleNode extends AbstractTreeNode
     protected function getPalette(): string
     {
         return '{content_legend},description;';
+    }
+
+    public function prepareNodeOutput(array $context, TreeModel $nodeModel): array
+    {
+        return $context;
     }
 }
