@@ -22,6 +22,7 @@ class MemberNode extends AbstractTreeNode
 
     public function prepareNodeOutput(array $context, TreeModel $nodeModel): array
     {
+
         return $context;
     }
 

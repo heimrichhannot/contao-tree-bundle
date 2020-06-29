@@ -23,7 +23,11 @@ use Contao\Model\Collection;
  * @property string $alias;
  * @property string $type;
  * @property int    $member;
+ * @property string $groups;
  * @property string $description;
+ * @property boolean $published
+ * @property string  $start
+ * @property string  $stop
  *
  * @method static Collection|TreeModel|null findByPid($pid, array $opt=array())
  */
