@@ -43,7 +43,7 @@ class NodeTypeCollection
         }
         $this->nodeTypes[$nodeType::getType()] = $nodeType;
 
-        if (!$nodeType->disallowRoot()) {
+        if ($nodeType->getIsRootSupported()) {
             $this->rootNodeTypes[] = $nodeType::getType();
         }
     }

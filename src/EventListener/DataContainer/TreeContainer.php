@@ -9,6 +9,7 @@
 namespace HeimrichHannot\TreeBundle\EventListener\DataContainer;
 
 use Contao\BackendUser;
+use Contao\Controller;
 use Contao\CoreBundle\Exception\AccessDeniedException;
 use Contao\Database;
 use Contao\DataContainer;
@@ -23,6 +24,7 @@ use Exception;
 use HeimrichHannot\TreeBundle\Collection\NodeTypeCollection;
 use HeimrichHannot\TreeBundle\Contao\Backend;
 use HeimrichHannot\TreeBundle\Model\TreeModel;
+use HeimrichHannot\TreeBundle\TreeNode\AbstractTreeNode;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
 
 class TreeContainer
@@ -78,7 +80,7 @@ class TreeContainer
             $parentNodeModel = TreeModel::findByPk($dc->pid);
 
             if ($parentNodeModel && ($parentNodeType = $this->nodeTypeCollection->getNodeType($parentNodeModel->type))) {
-                $allowedNodeTypes = $parentNodeType::allowedChilds();
+                $allowedNodeTypes = $parentNodeType->getAllowedChildren();
 
                 if (!\in_array($varValue, $allowedNodeTypes)) {
                     throw new Exception(sprintf($GLOBALS['TL_LANG']['ERR']['huh_tree_nodeTypeNotAllowed'], $varValue));
@@ -167,7 +169,7 @@ class TreeContainer
             $parentNodeModel = TreeModel::findByPk($dc->activeRecord->pid);
 
             if ($parentNodeModel && ($parentNodeType = $this->nodeTypeCollection->getNodeType($parentNodeModel->type))) {
-                $allowedNodeTypes = $parentNodeType::allowedChilds();
+                $allowedNodeTypes = $parentNodeType->getAllowedChildren();
             }
         }
 
@@ -197,35 +199,30 @@ class TreeContainer
     public function onLabelCallback($row, $label, DataContainer $dc = null, $imageAttribute = '', $blnReturnImage = false, $blnProtected = false)
     {
         $nodeModel = TreeModel::findByPk($row['id']);
+        $nodeType = $this->nodeTypeCollection->getNodeType($row['type']);
 
         if ($blnProtected) {
             $row['protected'] = true;
         }
 
-        $image = \Controller::getPageStatusIcon((object) $row);
-        $imageAttribute = trim($imageAttribute.' data-icon="'.\Controller::getPageStatusIcon((object) array_merge($row, ['published' => '1'])).'" data-icon-disabled="'.\Controller::getPageStatusIcon((object) array_merge($row, ['published' => ''])).'"');
+        $time = \Date::floorToMinute();
+
+        $published = (($row['start'] == '' || $row['start'] <= $time) && ($row['stop'] == '' || $row['stop'] > ($time + 60)) && $row['published'] == '1');
+
+        $image = $nodeType->getIcon($published ? AbstractTreeNode::ICON_STATE_PUBLISHED : AbstractTreeNode::ICON_STATE_UNPUBLISHED);
+
+        $imageAttribute = trim($imageAttribute.' data-icon="'.$nodeType->getIcon(AbstractTreeNode::ICON_STATE_PUBLISHED).'" data-icon-disabled="'.$nodeType->getIcon(AbstractTreeNode::ICON_STATE_UNPUBLISHED).'"');
 
         // Return the image only
         if ($blnReturnImage) {
-            return \Image::getHtml($image, '', $imageAttribute);
+            return Image::getHtml($image, '', $imageAttribute);
         }
 
         if ($nodeModel->isRootNode()) {
             $label = '<span><strong>'.$row['internalTitle'].'</strong> <br /> <span style="display: inline-block; margin-left: 20px; margin-top: 5px;">'.$label.'</span></span>';
         }
 
-        return $label;
-
-        // Add the breadcrumb link
-//        $label = '<a href="' . \Backend::addToUrl('pn=' . $row['id']) . '" title="' . \StringUtil::specialchars($GLOBALS['TL_LANG']['MSC']['selectNode']) . '">' . $label . '</a>';
-
-        // Return the image
-        return
-//            '<a href="contao/main.php?do=feRedirect&amp;page=' . $row['id'] . '" title="' . \StringUtil::specialchars($GLOBALS['TL_LANG']['MSC']['view']) . '"' . (($dc->table != 'tl_page') ? ' class="tl_gray"' : '') . ' target="_blank">' .
-            \Image::getHtml($image, '', $imageAttribute).
-//            '</a> ' .
-            $label
-            ;
+        return '<a href="'.Backend::addToUrl('do=feRedirect').'" onclick="return false;">'.Image::getHtml($image, '', $imageAttribute).'</a> <a href="" onclick="return false;">'.$label.'</a>';
     }
 
     /**
@@ -475,6 +472,13 @@ class TreeContainer
      */
     public function hasAccess($currentNode, $user = null, ?array $root = null): bool
     {
+        if (!$user) {
+            $user = BackendUser::getInstance();
+        }
+        if ($user->isAdmin) {
+            return true;
+        }
+
         if (is_numeric($currentNode)) {
             $currentNode = TreeModel::findByPk($currentNode);
         }
@@ -486,10 +490,6 @@ class TreeContainer
 
         if (!$currentNode->isRootNode()) {
             $rootNode = $currentNode->getRootNode();
-        }
-
-        if (!$user) {
-            $user = BackendUser::getInstance();
         }
 
         if (!$root) {

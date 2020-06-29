@@ -29,7 +29,7 @@ $GLOBALS['TL_DCA']['tl_tree'] = array
         'sorting' => array
         (
             'mode'               => 5,
-            'icon'               => 'pagemounts.svg',
+            'icon'               => 'bundles/heimrichhannottree/img/backend/tree.svg',
 			'paste_button_callback'   => array(\HeimrichHannot\TreeBundle\EventListener\DataContainer\TreeContainer::class, 'onPasteButtonCallback'),
             'panelLayout'        => 'filter;search',
             'child_record_class' => 'tl_tree',
@@ -218,17 +218,17 @@ $GLOBALS['TL_DCA']['tl_tree'] = array
 			'eval'                    => array('style'=>'height:60px', 'decodeEntities'=>true, 'tl_class'=>'clr'),
 			'sql'                     => "text NULL"
 		),
-//		'groups' => array
-//		(
-//			'label'                   => &$GLOBALS['TL_LANG']['tl_page']['groups'],
-//			'exclude'                 => true,
-//			'filter'                  => true,
-//			'inputType'               => 'checkbox',
-//			'foreignKey'              => 'tl_member_group.name',
-//			'eval'                    => array('mandatory'=>true, 'multiple'=>true),
-//			'sql'                     => "blob NULL",
-//			'relation'                => array('type'=>'hasMany', 'load'=>'lazy')
-//		),
+		'groups' => array
+		(
+			'label'                   => &$GLOBALS['TL_LANG']['tl_tree']['groups'],
+			'exclude'                 => true,
+			'filter'                  => true,
+			'inputType'               => 'checkbox',
+			'foreignKey'              => 'tl_member_group.name',
+			'eval'                    => array('mandatory'=>true, 'multiple'=>true),
+			'sql'                     => "blob NULL",
+			'relation'                => array('type'=>'hasMany', 'load'=>'lazy')
+		),
 		'published' => array
 		(
 			'label'                   => &$GLOBALS['TL_LANG']['tl_tree']['published'],

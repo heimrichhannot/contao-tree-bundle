@@ -1,9 +1,10 @@
 <?php
 $lang = &$GLOBALS['TL_LANG']['tl_tree'];
 
-$lang['TYPES']['mainroot']    = 'Baumstrukturen';
-$lang['TYPES']['simple_node'] = 'Einfacher Knoten';
-$lang['TYPES']['member_node'] = 'Mitglied-Knoten';
+$lang['TYPES']['mainroot']          = 'Baumstrukturen';
+$lang['TYPES']['simple_node']       = 'Einfacher Knoten';
+$lang['TYPES']['member_node']       = 'Mitglied-Knoten';
+$lang['TYPES']['member_group_node'] = 'Mitgliedergruppen-Knoten';
 
 /**
  * Buttons
@@ -31,6 +32,10 @@ $lang['type'][0]          = 'Knoten-Typ';
 $lang['type'][1]          = 'Bitte wählen Sie den Typ des Baumknoten aus.';
 $lang['description'][0]   = 'Beschreibung';
 $lang['description'][1]   = 'Hier können Sie eine Beschreibung zum Knoten angeben. Diese kann im Frontend ausgegeben werden.';
+$lang['member'][0]        = 'Mitglied';
+$lang['member'][1]        = 'Hier können Sie dem Knoten ein Mitglied zuordnen';
+$lang['groups'][0]        = 'Mitgliedergruppen';
+$lang['groups'][1]        = 'Hier können Sie dem Knoten Mitgliedergruppen zuordnen';
 $lang['published'][0]     = 'Knoten veröffentlichen';
 $lang['published'][1]     = 'Diesen Baumknoten veröffentlichen. Ist der Baumknoten versteckt, werden auch Kindknoten nicht ausgegeben.';
 $lang['start'][0]         = 'Anzeigen ab';

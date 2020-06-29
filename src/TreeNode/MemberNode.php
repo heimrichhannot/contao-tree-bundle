@@ -10,6 +10,9 @@ namespace HeimrichHannot\TreeBundle\TreeNode;
 
 class MemberNode extends AbstractTreeNode
 {
+    protected $iconHidden = 'member_.svg';
+    protected $iconPublished = 'member.svg';
+
     public static function getType(): string
     {
         return 'member_node';
