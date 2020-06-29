@@ -20,13 +20,13 @@ class MemberGroupNode extends AbstractTreeNode
         return 'member_group_node';
     }
 
-    protected function getPalette(): string
-    {
-        return '{content_legend},groups,description;';
-    }
-
     public function prepareNodeOutput(array $context, TreeModel $nodeModel): array
     {
         return $context;
+    }
+
+    protected function getPalette(): string
+    {
+        return '{content_legend},groups,description;';
     }
 }

@@ -1,16 +1,12 @@
 <?php
-/**
- * Contao Open Source CMS
- *
+
+/*
  * Copyright (c) 2020 Heimrich & Hannot GmbH
  *
- * @author  Thomas Körner <t.koerner@heimrich-hannot.de>
- * @license http://www.gnu.org/licences/lgpl-3.0.html LGPL
+ * @license LGPL-3.0-or-later
  */
 
-
 namespace HeimrichHannot\TreeBundle\Generator;
-
 
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\FetchMode;
@@ -54,19 +50,19 @@ class TreeGenerator
     }
 
     /**
-     * Render a tree
-     *
-     * @param int $rootNodeId
-     * @return string
+     * Render a tree.
      */
     public function renderTree(int $rootNodeId): string
     {
         $rootNode = TreeModel::findByPk($rootNodeId);
+
         if (!$rootNode || !$rootNode->isRootNode()) {
-            trigger_error("Tree node does not exist or is not a root node.", E_USER_WARNING);
+            trigger_error('Tree node does not exist or is not a root node.', E_USER_WARNING);
+
             if ($this->kernel->isDebug()) {
                 return '<!-- Tree node does not exist or is not a root node. -->';
             }
+
             return '';
         }
 
@@ -74,10 +70,8 @@ class TreeGenerator
     }
 
     /**
-     * Render a single node with it's childs
+     * Render a single node with it's childs.
      *
-     * @param TreeModel $parent
-     * @return string
      * @throws \Doctrine\DBAL\DBALException
      * @throws \Twig\Error\LoaderError
      * @throws \Twig\Error\RuntimeError
@@ -90,10 +84,12 @@ class TreeGenerator
 
         $time = \Date::floorToMinute();
         $stmt = $this->connection->prepare("SELECT id FROM tl_tree WHERE pid=? AND (start='' OR start<=?) AND (stop='' OR stop>?) AND published='1' ORDER BY sorting ASC");
-        $stmt->execute([$parent->id, $time, $time+60]);
+        $stmt->execute([$parent->id, $time, $time + 60]);
+
         if ($stmt->rowCount() > 0) {
             while ($child = $stmt->fetch(FetchMode::STANDARD_OBJECT)) {
                 $childModel = TreeModel::findByPk($child->id);
+
                 if (!$childModel) {
                     continue;
                 }
@@ -102,6 +98,7 @@ class TreeGenerator
         }
 
         $nodeType = $this->nodeTypeCollection->getNodeType($parent->type);
+
         if ($nodeType) {
             $context = $nodeType->prepareNodeOutput($context, $parent);
         }

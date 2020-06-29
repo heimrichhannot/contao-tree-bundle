@@ -72,17 +72,14 @@ abstract class AbstractTreeNode
     }
 
     /**
+     * Prepare the node context before rendering the node template.
+     */
+    abstract public function prepareNodeOutput(array $context, TreeModel $nodeModel): array;
+
+    /**
      * Return the node palette including legends.
      *
      * "{title_legend},title,alias,type;" is always prepended, so don't add it here.
      */
     abstract protected function getPalette(): string;
-
-    /**
-     * Prepare the node context before rendering the node template.
-     *
-     * @param array $context
-     * @return array
-     */
-    abstract public function prepareNodeOutput(array $context, TreeModel $nodeModel): array;
 }

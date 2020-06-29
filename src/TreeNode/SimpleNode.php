@@ -17,13 +17,13 @@ class SimpleNode extends AbstractTreeNode
         return 'simple_node';
     }
 
-    protected function getPalette(): string
-    {
-        return '{content_legend},description;';
-    }
-
     public function prepareNodeOutput(array $context, TreeModel $nodeModel): array
     {
         return $context;
+    }
+
+    protected function getPalette(): string
+    {
+        return '{content_legend},description;';
     }
 }

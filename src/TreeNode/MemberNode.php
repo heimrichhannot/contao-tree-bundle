@@ -20,14 +20,13 @@ class MemberNode extends AbstractTreeNode
         return 'member_node';
     }
 
+    public function prepareNodeOutput(array $context, TreeModel $nodeModel): array
+    {
+        return $context;
+    }
+
     protected function getPalette(): string
     {
         return '{content_legend},member,description;';
-    }
-
-    public function prepareNodeOutput(array $context, TreeModel $nodeModel): array
-    {
-
-        return $context;
     }
 }
