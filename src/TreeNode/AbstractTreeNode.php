@@ -8,7 +8,6 @@
 
 namespace HeimrichHannot\TreeBundle\TreeNode;
 
-use Contao\DataContainer;
 use HeimrichHannot\TreeBundle\Event\ModifiyNodeLabelEvent;
 use HeimrichHannot\TreeBundle\Model\TreeModel;
 
@@ -80,9 +79,6 @@ abstract class AbstractTreeNode
 
     /**
      * Modify or override the backend label of the current node.
-     *
-     * @param ModifiyNodeLabelEvent $event
-     * @return string
      */
     public function onLabelCallback(ModifiyNodeLabelEvent $event): string
     {

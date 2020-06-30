@@ -1,16 +1,12 @@
 <?php
-/**
- * Contao Open Source CMS
- *
+
+/*
  * Copyright (c) 2020 Heimrich & Hannot GmbH
  *
- * @author  Thomas Körner <t.koerner@heimrich-hannot.de>
- * @license http://www.gnu.org/licences/lgpl-3.0.html LGPL
+ * @license LGPL-3.0-or-later
  */
 
-
 namespace HeimrichHannot\TreeBundle\Event;
-
 
 use Contao\DataContainer;
 
@@ -49,41 +45,26 @@ class ModifiyNodeLabelEvent
         $this->dc = $dc;
     }
 
-    /**
-     * @return string
-     */
     public function getLabel(): string
     {
         return $this->label;
     }
 
-    /**
-     * @return array
-     */
     public function getRow(): array
     {
         return $this->row;
     }
 
-    /**
-     * @return string
-     */
     public function getImage(): string
     {
         return $this->image;
     }
 
-    /**
-     * @return string
-     */
     public function getImageAttribute(): string
     {
         return $this->imageAttribute;
     }
 
-    /**
-     * @return DataContainer
-     */
     public function getDc(): DataContainer
     {
         return $this->dc;

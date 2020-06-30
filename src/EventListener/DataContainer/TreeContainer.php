@@ -59,6 +59,7 @@ class TreeContainer
 
         if ($node && 0 == $node->pid) {
             $palettes = &$GLOBALS['TL_DCA']['tl_tree']['palettes'];
+
             if (!isset($palettes[$node->type])) {
                 $node->type = 'default';
             }
@@ -232,9 +233,10 @@ class TreeContainer
             ? $GLOBALS['TL_LANG']['tl_tree']['TYPES'][$row['type']]
             : $row['type'];
 
-        $label =  '<a href="'.Backend::addToUrl('do=feRedirect').'" onclick="return false;">'.Image::getHtml($image, '', $imageAttribute).'</a> <a href="" onclick="return false;">'.$label.'</a> <span style="color:#999;padding-left:3px">[' .$nodeTypeLabel .']</span>';
+        $label = '<a href="'.Backend::addToUrl('do=feRedirect').'" onclick="return false;">'.Image::getHtml($image, '', $imageAttribute).'</a> <a href="" onclick="return false;">'.$label.'</a> <span style="color:#999;padding-left:3px">['.$nodeTypeLabel.']</span>';
 
         $label = $nodeType->onLabelCallback(new ModifiyNodeLabelEvent($label, $row, $image, $imageAttribute, $dc));
+
         return $label;
     }
 
