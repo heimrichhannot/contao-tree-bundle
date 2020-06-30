@@ -174,7 +174,6 @@ $GLOBALS['TL_DCA']['tl_tree'] = [
             'label' => &$GLOBALS['TL_LANG']['tl_tree']['outputType'],
             'default' => \HeimrichHannot\TreeBundle\OutputType\ListOutputType::getType(),
             'exclude' => true,
-            'filter' => true,
             'inputType' => 'select',
             'options_callback' => [\HeimrichHannot\TreeBundle\EventListener\DataContainer\TreeContainer::class, 'onOutputTypeOptionsCallback'],
             'eval' => ['submitOnChange' => true, 'tl_class' => 'w50'],

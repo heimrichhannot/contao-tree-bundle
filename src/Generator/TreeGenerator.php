@@ -11,8 +11,12 @@ namespace HeimrichHannot\TreeBundle\Generator;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\FetchMode;
 use HeimrichHannot\TreeBundle\Collection\NodeTypeCollection;
+use HeimrichHannot\TreeBundle\Collection\OutputTypeCollection;
 use HeimrichHannot\TreeBundle\Event\BeforeRenderNodeEvent;
 use HeimrichHannot\TreeBundle\Model\TreeModel;
+use HeimrichHannot\TreeBundle\OutputType\AbstractOutputType;
+use HeimrichHannot\TreeBundle\OutputType\ListOutputType;
+use HeimrichHannot\TreeBundle\TreeNode\AbstractTreeNode;
 use HeimrichHannot\UtilsBundle\Template\TemplateUtil;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpKernel\KernelInterface;
@@ -21,6 +25,10 @@ use Twig\Error\LoaderError;
 
 class TreeGenerator
 {
+    /**
+     * @var array
+     */
+    protected $templateCache = [];
     /**
      * @var KernelInterface
      */
@@ -45,8 +53,12 @@ class TreeGenerator
      * @var TemplateUtil
      */
     private $templateUtil;
+    /**
+     * @var OutputTypeCollection
+     */
+    private $outputTypeCollection;
 
-    public function __construct(KernelInterface $kernel, Connection $connection, Environment $twig, NodeTypeCollection $nodeTypeCollection, EventDispatcherInterface $eventDispatcher, TemplateUtil $templateUtil)
+    public function __construct(KernelInterface $kernel, Connection $connection, Environment $twig, NodeTypeCollection $nodeTypeCollection, EventDispatcherInterface $eventDispatcher, TemplateUtil $templateUtil, OutputTypeCollection $outputTypeCollection)
     {
         $this->kernel = $kernel;
         $this->connection = $connection;
@@ -54,6 +66,7 @@ class TreeGenerator
         $this->nodeTypeCollection = $nodeTypeCollection;
         $this->eventDispatcher = $eventDispatcher;
         $this->templateUtil = $templateUtil;
+        $this->outputTypeCollection = $outputTypeCollection;
     }
 
     /**
@@ -73,7 +86,7 @@ class TreeGenerator
             return '';
         }
 
-        return $this->renderNode($rootNode);
+        return $this->renderNode($rootNode, $rootNode);
     }
 
     /**
@@ -84,7 +97,7 @@ class TreeGenerator
      * @throws \Twig\Error\RuntimeError
      * @throws \Twig\Error\SyntaxError
      */
-    protected function renderNode(TreeModel $currentNode, int $depth = 0): string
+    protected function renderNode(TreeModel $currentNode, TreeModel $rootNode, int $depth = 0): string
     {
         $context = $currentNode->row();
         $context['childs'] = [];
@@ -101,21 +114,47 @@ class TreeGenerator
                 if (!$childModel) {
                     continue;
                 }
-                $context['childs'][$child->id] = $this->renderNode($childModel, ++$depth);
+                $context['childs'][$child->id] = $this->renderNode($childModel, $rootNode, ++$depth);
             }
         }
 
         $nodeType = $this->nodeTypeCollection->getNodeType($currentNode->type);
+        $outputType = $this->outputTypeCollection->getType($rootNode->outputType ?: ListOutputType::getType());
 
-        try {
-            $template = $this->templateUtil->getTemplate('treenode_'.$nodeType::getType());
-        } catch (LoaderError $e) {
-            $template = $this->templateUtil->getTemplate('treenode_default');
-        }
+        $template = $this->getTemplate($nodeType, $outputType);
 
-        $this->eventDispatcher->addListener(BeforeRenderNodeEvent::NAME, [$nodeType, 'onBeforeRenderEvent'], 255);
+        $this->eventDispatcher->addListener(BeforeRenderNodeEvent::NAME, [$nodeType, 'onBeforeRenderEvent'], 200);
+        $this->eventDispatcher->addListener(BeforeRenderNodeEvent::NAME, [$outputType, 'onBeforeRenderEvent'], 100);
         $event = $this->eventDispatcher->dispatch(BeforeRenderNodeEvent::NAME, new BeforeRenderNodeEvent($context, $currentNode, $template));
 
         return $this->twig->render($event->getTemplate(), $event->getContext());
+    }
+
+    protected function getTemplate(AbstractTreeNode $nodeType, AbstractOutputType $outputType): string
+    {
+        if (isset($this->templateCache[$nodeType::getType()])) {
+            return $this->templateCache[$nodeType::getType()];
+        }
+        $templateHierarchy = [
+            'treenode_'.$outputType::getType().'_'.$nodeType::getType(),
+            'treenode_'.$outputType::getType().'_default',
+            'treenode_default',
+        ];
+
+        foreach ($templateHierarchy as $template) {
+            try {
+                $template = $this->templateUtil->getTemplate($template);
+            } catch (LoaderError $e) {
+                continue;
+            }
+
+            break;
+        }
+
+        if ($template) {
+            $this->templateCache[$nodeType::getType()] = $template;
+        }
+
+        return $template;
     }
 }

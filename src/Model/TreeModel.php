@@ -22,6 +22,7 @@ use Contao\Model\Collection;
  * @property string $internalTitle;
  * @property string $alias;
  * @property string $type;
+ * @property string $outputType;
  * @property int    $member;
  * @property string $groups;
  * @property string $description;
