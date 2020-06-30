@@ -13,9 +13,11 @@ use Doctrine\DBAL\FetchMode;
 use HeimrichHannot\TreeBundle\Collection\NodeTypeCollection;
 use HeimrichHannot\TreeBundle\Event\BeforeRenderNodeEvent;
 use HeimrichHannot\TreeBundle\Model\TreeModel;
+use HeimrichHannot\UtilsBundle\Template\TemplateUtil;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpKernel\KernelInterface;
 use Twig\Environment;
+use Twig\Error\LoaderError;
 
 class TreeGenerator
 {
@@ -39,14 +41,19 @@ class TreeGenerator
      * @var EventDispatcherInterface
      */
     private $eventDispatcher;
+    /**
+     * @var TemplateUtil
+     */
+    private $templateUtil;
 
-    public function __construct(KernelInterface $kernel, Connection $connection, Environment $twig, NodeTypeCollection $nodeTypeCollection, EventDispatcherInterface $eventDispatcher)
+    public function __construct(KernelInterface $kernel, Connection $connection, Environment $twig, NodeTypeCollection $nodeTypeCollection, EventDispatcherInterface $eventDispatcher, TemplateUtil $templateUtil)
     {
         $this->kernel = $kernel;
         $this->connection = $connection;
         $this->twig = $twig;
         $this->nodeTypeCollection = $nodeTypeCollection;
         $this->eventDispatcher = $eventDispatcher;
+        $this->templateUtil = $templateUtil;
     }
 
     /**
@@ -77,15 +84,15 @@ class TreeGenerator
      * @throws \Twig\Error\RuntimeError
      * @throws \Twig\Error\SyntaxError
      */
-    protected function renderNode(TreeModel $parent, int $depth = 0): string
+    protected function renderNode(TreeModel $currentNode, int $depth = 0): string
     {
-        $context = $parent->row();
+        $context = $currentNode->row();
         $context['childs'] = [];
         $context['depth'] = $depth;
 
         $time = \Date::floorToMinute();
         $stmt = $this->connection->prepare("SELECT id FROM tl_tree WHERE pid=? AND (start='' OR start<=?) AND (stop='' OR stop>?) AND published='1' ORDER BY sorting ASC");
-        $stmt->execute([$parent->id, $time, $time + 60]);
+        $stmt->execute([$currentNode->id, $time, $time + 60]);
 
         if ($stmt->rowCount() > 0) {
             while ($child = $stmt->fetch(FetchMode::STANDARD_OBJECT)) {
@@ -98,14 +105,17 @@ class TreeGenerator
             }
         }
 
-        $nodeType = $this->nodeTypeCollection->getNodeType($parent->type);
+        $nodeType = $this->nodeTypeCollection->getNodeType($currentNode->type);
 
-        if ($nodeType) {
-            $context = $nodeType->prepareNodeOutput($context, $parent);
+        try {
+            $template = $this->templateUtil->getTemplate('treenode_'.$nodeType::getType());
+        } catch (LoaderError $e) {
+            $template = $this->templateUtil->getTemplate('treenode_default');
         }
 
-        $event = $this->eventDispatcher->dispatch(BeforeRenderNodeEvent::NAME, new BeforeRenderNodeEvent($context, $parent));
+        $this->eventDispatcher->addListener(BeforeRenderNodeEvent::NAME, [$nodeType, 'onBeforeRenderEvent'], 255);
+        $event = $this->eventDispatcher->dispatch(BeforeRenderNodeEvent::NAME, new BeforeRenderNodeEvent($context, $currentNode, $template));
 
-        return $this->twig->render('@HeimrichHannotTree/node/treenode_default.html.twig', $event->getContext());
+        return $this->twig->render($event->getTemplate(), $event->getContext());
     }
 }

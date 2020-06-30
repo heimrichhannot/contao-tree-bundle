@@ -8,8 +8,8 @@
 
 namespace HeimrichHannot\TreeBundle\TreeNode;
 
-use HeimrichHannot\TreeBundle\Event\ModifiyNodeLabelEvent;
-use HeimrichHannot\TreeBundle\Model\TreeModel;
+use HeimrichHannot\TreeBundle\Event\BeforeRenderNodeEvent;
+use HeimrichHannot\TreeBundle\Event\ModifiyNodeLabelCallback;
 
 /**
  * This interface must be implemented by tree nodes.
@@ -75,12 +75,14 @@ abstract class AbstractTreeNode
     /**
      * Prepare the node context before rendering the node template.
      */
-    abstract public function prepareNodeOutput(array $context, TreeModel $nodeModel): array;
+    public function onBeforeRenderEvent(BeforeRenderNodeEvent $event): void
+    {
+    }
 
     /**
      * Modify or override the backend label of the current node.
      */
-    public function onLabelCallback(ModifiyNodeLabelEvent $event): string
+    public function onLabelCallback(ModifiyNodeLabelCallback $event): string
     {
         return $event->getLabel();
     }

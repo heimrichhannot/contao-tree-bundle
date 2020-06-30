@@ -1,0 +1,9 @@
+{% extends '@HeimrichHannotTree/node/treenode_default.html.twig' %}
+{% block description %}
+    <div itemscope itemtype="http://schema.org/Person">
+        <span itemprop="name">{{ member.firstname|default }} {{ member.lastname|default }}</span>
+        {% if description is defined and description is not empty %}
+            <span itemprop="description">{{ description|default }}</span>
+        {% endif %}
+    </div>
+{% endblock %}

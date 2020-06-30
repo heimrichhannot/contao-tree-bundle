@@ -22,7 +22,7 @@ use Doctrine\DBAL\FetchMode;
 use Exception;
 use HeimrichHannot\TreeBundle\Collection\NodeTypeCollection;
 use HeimrichHannot\TreeBundle\Contao\Backend;
-use HeimrichHannot\TreeBundle\Event\ModifiyNodeLabelEvent;
+use HeimrichHannot\TreeBundle\Event\ModifiyNodeLabelCallback;
 use HeimrichHannot\TreeBundle\Model\TreeModel;
 use HeimrichHannot\TreeBundle\TreeNode\AbstractTreeNode;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
@@ -244,7 +244,7 @@ class TreeContainer
 
         $label = '<a href="'.Backend::addToUrl('do=feRedirect').'" onclick="return false;">'.Image::getHtml($image, '', $imageAttribute).'</a> <a href="" onclick="return false;">'.$label.'</a> <span style="color:#999;padding-left:3px">['.$nodeTypeLabel.']</span>';
 
-        $label = $nodeType->onLabelCallback(new ModifiyNodeLabelEvent($label, $row, $image, $imageAttribute, $dc, $hasChilds));
+        $label = $nodeType->onLabelCallback(new ModifiyNodeLabelCallback($label, $row, $image, $imageAttribute, $dc, $hasChilds, $nodeModel));
 
         return $label;
     }

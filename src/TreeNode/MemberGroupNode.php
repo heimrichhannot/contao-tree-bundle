@@ -11,8 +11,7 @@ namespace HeimrichHannot\TreeBundle\TreeNode;
 use Contao\MemberGroupModel;
 use Contao\Model\Collection;
 use Contao\StringUtil;
-use HeimrichHannot\TreeBundle\Event\ModifiyNodeLabelEvent;
-use HeimrichHannot\TreeBundle\Model\TreeModel;
+use HeimrichHannot\TreeBundle\Event\ModifiyNodeLabelCallback;
 use HeimrichHannot\UtilsBundle\Model\ModelUtil;
 
 class MemberGroupNode extends AbstractTreeNode
@@ -37,12 +36,7 @@ class MemberGroupNode extends AbstractTreeNode
         return 'member_group';
     }
 
-    public function prepareNodeOutput(array $context, TreeModel $nodeModel): array
-    {
-        return $context;
-    }
-
-    public function onLabelCallback(ModifiyNodeLabelEvent $event): string
+    public function onLabelCallback(ModifiyNodeLabelCallback $event): string
     {
         if (!isset($event->getRow()['groups'])) {
             return parent::onLabelCallback($event);

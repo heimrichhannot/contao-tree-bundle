@@ -23,14 +23,19 @@ class BeforeRenderNodeEvent extends Event
      * @var TreeModel
      */
     private $treeModel;
+    /**
+     * @var string
+     */
+    private $template;
 
     /**
      * BeforeRenderNodeEvent constructor.
      */
-    public function __construct(array $context, TreeModel $treeModel)
+    public function __construct(array $context, TreeModel $treeModel, string $template)
     {
         $this->context = $context;
         $this->treeModel = $treeModel;
+        $this->template = $template;
     }
 
     public function getContext(): array
@@ -51,5 +56,15 @@ class BeforeRenderNodeEvent extends Event
     public function setTreeModel(TreeModel $treeModel): void
     {
         $this->treeModel = $treeModel;
+    }
+
+    public function getTemplate(): string
+    {
+        return $this->template;
+    }
+
+    public function setTemplate(string $template): void
+    {
+        $this->template = $template;
     }
 }

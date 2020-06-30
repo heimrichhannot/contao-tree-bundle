@@ -9,8 +9,9 @@
 namespace HeimrichHannot\TreeBundle\Event;
 
 use Contao\DataContainer;
+use HeimrichHannot\TreeBundle\Model\TreeModel;
 
-class ModifiyNodeLabelEvent
+class ModifiyNodeLabelCallback
 {
     /**
      * @var string
@@ -36,11 +37,15 @@ class ModifiyNodeLabelEvent
      * @var bool
      */
     private $hasChilds;
+    /**
+     * @var TreeModel
+     */
+    private $treeModel;
 
     /**
      * ModifiyNodeLabelEvent constructor.
      */
-    public function __construct(string $label, array $row, string $image, string $imageAttribute, DataContainer $dc, bool $hasChilds)
+    public function __construct(string $label, array $row, string $image, string $imageAttribute, DataContainer $dc, bool $hasChilds, TreeModel $treeModel)
     {
         $this->label = $label;
         $this->row = $row;
@@ -48,6 +53,7 @@ class ModifiyNodeLabelEvent
         $this->imageAttribute = $imageAttribute;
         $this->dc = $dc;
         $this->hasChilds = $hasChilds;
+        $this->treeModel = $treeModel;
     }
 
     public function getLabel(): string
@@ -78,5 +84,13 @@ class ModifiyNodeLabelEvent
     public function getHasChilds(): bool
     {
         return $this->hasChilds;
+    }
+
+    /**
+     * @return TreeModel
+     */
+    public function getTreeModel(): TreeModel
+    {
+        return $this->treeModel;
     }
 }

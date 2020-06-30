@@ -3,7 +3,9 @@
     <span>{{ title }}</span>
     {% endblock %}
     {% block description %}
-    <p>{{ description }}</p>
+        {% if description is defined and description is not empty %}
+            <p>{{ description }}</p>
+        {% endif %}
     {% endblock %}
     {% if childs|length > 0 %}
         <ul>
