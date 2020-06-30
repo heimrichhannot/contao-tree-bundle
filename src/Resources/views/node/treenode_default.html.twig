@@ -1,4 +1,4 @@
-<div class="{{ type }} depth_{{ depth }}">
+<div class="{% block wrapperClasses %}{{ type }} depth_{{ depth }}{% endblock %}" id="node_{{ alias }}">
     {% block title %}
     <span>{{ title }}</span>
     {% endblock %}

@@ -86,9 +86,6 @@ class ModifiyNodeLabelCallback
         return $this->hasChilds;
     }
 
-    /**
-     * @return TreeModel
-     */
     public function getTreeModel(): TreeModel
     {
         return $this->treeModel;

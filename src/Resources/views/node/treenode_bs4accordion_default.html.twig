@@ -1,19 +1,40 @@
-<div class="{{ type }} depth_{{ depth }}">
-    {% block title %}
-    <span>{{ title }}</span>
-    {% endblock %}
-    {% block description %}
-        {% if description is defined and description is not empty %}
-            <p>{{ description }}</p>
-        {% endif %}
-    {% endblock %}
-    {% if childs|length > 0 %}
-        <ul>
+{% if depth == 0  %}
+    <div class="{% block wrapperClasses %}{{ type }} depth_{{ depth }}{% endblock %}" id="node_{{ alias }}">
+        <span>{{ title }}</span>
+{% else %}
+    <div class="card" id="node_{{ alias }}">
+        <div class="card-header" id="node_{{ alias }}_header">
+            <h2 class="mb-0">
+                <button class="btn btn-link btn-block text-left" type="button" data-toggle="collapse" data-target="#node_{{ alias }}_body" aria-expanded="false" aria-controls="node_{{ alias }}_body">
+                    {{ title }}
+                </button>
+            </h2>
+        </div>
+
+        <div id="node_{{ alias }}_body" class="collapse" aria-labelledby="node_{{ alias }}_header" data-parent="#{{ parentNode.alias }}_child">
+            <div class="card-body">
+
+{% endif %}
+
+{% block description %}
+    {% if description is defined and description is not empty %}
+        <p>{{ description }}</p>
+    {% endif %}
+{% endblock %}
+{% if childs|length > 0 %}
+    <div class="accordion" id="{{ alias }}_child">
         {% for child in childs %}
             {% block child %}
-            <li>{{ child|raw }}</li>
+                {{ child|raw }}
             {% endblock %}
         {% endfor %}
-        </ul>
-    {% endif %}
-</div>
+    </div>
+{% endif %}
+
+{% if depth == 0  %}
+    </div>
+{% else %}
+            </div>
+        </div>
+    </div>
+{% endif %}

@@ -138,6 +138,7 @@ class TreeGenerator
         $templateHierarchy = [
             'treenode_'.$outputType::getType().'_'.$nodeType::getType(),
             'treenode_'.$outputType::getType().'_default',
+            'treenode_'.$nodeType::getType(),
             'treenode_default',
         ];
 
