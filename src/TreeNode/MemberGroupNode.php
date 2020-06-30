@@ -32,7 +32,6 @@ class MemberGroupNode extends AbstractTreeNode
         $this->modelUtil = $modelUtil;
     }
 
-
     public static function getType(): string
     {
         return 'member_group';
@@ -41,11 +40,6 @@ class MemberGroupNode extends AbstractTreeNode
     public function prepareNodeOutput(array $context, TreeModel $nodeModel): array
     {
         return $context;
-    }
-
-    protected function getPalette(): string
-    {
-        return '{content_legend},groups,description;';
     }
 
     public function onLabelCallback(ModifiyNodeLabelEvent $event): string
@@ -71,5 +65,8 @@ class MemberGroupNode extends AbstractTreeNode
         return $label;
     }
 
-
+    protected function getPalette(): string
+    {
+        return '{content_legend},groups,description;';
+    }
 }
