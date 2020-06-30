@@ -21,6 +21,7 @@ use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\FetchMode;
 use Exception;
 use HeimrichHannot\TreeBundle\Collection\NodeTypeCollection;
+use HeimrichHannot\TreeBundle\Collection\OutputTypeCollection;
 use HeimrichHannot\TreeBundle\Contao\Backend;
 use HeimrichHannot\TreeBundle\Event\ModifiyNodeLabelCallback;
 use HeimrichHannot\TreeBundle\Model\TreeModel;
@@ -44,12 +45,17 @@ class TreeContainer
      * @var SessionInterface
      */
     private $session;
+    /**
+     * @var OutputTypeCollection
+     */
+    private $outputTypeCollection;
 
-    public function __construct(Connection $connection, NodeTypeCollection $collection, SessionInterface $session)
+    public function __construct(Connection $connection, NodeTypeCollection $collection, SessionInterface $session, OutputTypeCollection $outputTypeCollection)
     {
         $this->connection = $connection;
         $this->nodeTypeCollection = $collection;
         $this->session = $session;
+        $this->outputTypeCollection = $outputTypeCollection;
     }
 
     public function onLoadCallback(DataContainer $dc)
@@ -63,7 +69,7 @@ class TreeContainer
             if (!isset($palettes[$node->type])) {
                 $node->type = 'default';
             }
-            $palettes[$node->type] = '{tree_legend},internalTitle;'.$palettes[$node->type];
+            $palettes[$node->type] = '{tree_legend},internalTitle,outputType;'.$palettes[$node->type];
         }
         $this->setRootType($dc);
     }
@@ -185,6 +191,16 @@ class TreeContainer
         }
 
         return $arrOptions;
+    }
+
+    /**
+     * Returns all allowed node types as array.
+     *
+     * @return array
+     */
+    public function onOutputTypeOptionsCallback(DataContainer $dc)
+    {
+        return array_keys($this->outputTypeCollection->getOutputTypes());
     }
 
     /**

@@ -10,7 +10,14 @@ services:
     resource: '../../TreeNode/*'
     tags: ['huh.tree.node_type']
 
+  HeimrichHannot\TreeBundle\OutputType\:
+    resource: '../../OutputType/*'
+    tags: ['huh.tree.output_type']
+
   HeimrichHannot\TreeBundle\Collection\NodeTypeCollection:
     arguments: [!tagged huh.tree.node_type]
+
+  HeimrichHannot\TreeBundle\Collection\OutputTypeCollection:
+    arguments: [!tagged huh.tree.output_type]
 
   HeimrichHannot\TreeBundle\Generator\TreeGenerator: ~
