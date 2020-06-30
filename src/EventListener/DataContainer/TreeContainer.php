@@ -216,10 +216,9 @@ class TreeContainer
 
         $published = (('' == $row['start'] || $row['start'] <= $time) && ('' == $row['stop'] || $row['stop'] > ($time + 60)) && '1' == $row['published']);
 
-        $stmt = $this->connection->prepare("SELECT id FROM tl_tree WHERE pid=?");
+        $stmt = $this->connection->prepare('SELECT id FROM tl_tree WHERE pid=?');
         $stmt->execute([$row['id']]);
         $hasChilds = ($stmt->rowCount() > 0);
-
 
         $image = $nodeType->getIcon($published ? AbstractTreeNode::ICON_STATE_PUBLISHED : AbstractTreeNode::ICON_STATE_UNPUBLISHED);
 

@@ -75,9 +75,6 @@ class ModifiyNodeLabelEvent
         return $this->dc;
     }
 
-    /**
-     * @return bool
-     */
     public function getHasChilds(): bool
     {
         return $this->hasChilds;
