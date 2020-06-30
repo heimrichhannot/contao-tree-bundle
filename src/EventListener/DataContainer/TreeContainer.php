@@ -216,6 +216,11 @@ class TreeContainer
 
         $published = (('' == $row['start'] || $row['start'] <= $time) && ('' == $row['stop'] || $row['stop'] > ($time + 60)) && '1' == $row['published']);
 
+        $stmt = $this->connection->prepare("SELECT id FROM tl_tree WHERE pid=?");
+        $stmt->execute([$row['id']]);
+        $hasChilds = ($stmt->rowCount() > 0);
+
+
         $image = $nodeType->getIcon($published ? AbstractTreeNode::ICON_STATE_PUBLISHED : AbstractTreeNode::ICON_STATE_UNPUBLISHED);
 
         $imageAttribute = trim($imageAttribute.' data-icon="'.$nodeType->getIcon(AbstractTreeNode::ICON_STATE_PUBLISHED).'" data-icon-disabled="'.$nodeType->getIcon(AbstractTreeNode::ICON_STATE_UNPUBLISHED).'"');
@@ -226,7 +231,12 @@ class TreeContainer
         }
 
         if ($nodeModel->isRootNode()) {
-            $label = '<span><strong>'.$row['internalTitle'].'</strong> <br /> <span style="display: inline-block; margin-left: 20px; margin-top: 5px;">'.$label.'</span></span>';
+            if ($hasChilds) {
+                $margin = '40';
+            } else {
+                $margin = '20';
+            }
+            $label = '<span><strong>'.$row['internalTitle'].'</strong> <br /> <span style="display: inline-block; margin-left: '.$margin.'px; margin-top: 5px;">'.$label.'</span></span>';
         }
 
         $nodeTypeLabel = isset($GLOBALS['TL_LANG']['tl_tree']['TYPES'][$row['type']])
@@ -235,7 +245,7 @@ class TreeContainer
 
         $label = '<a href="'.Backend::addToUrl('do=feRedirect').'" onclick="return false;">'.Image::getHtml($image, '', $imageAttribute).'</a> <a href="" onclick="return false;">'.$label.'</a> <span style="color:#999;padding-left:3px">['.$nodeTypeLabel.']</span>';
 
-        $label = $nodeType->onLabelCallback(new ModifiyNodeLabelEvent($label, $row, $image, $imageAttribute, $dc));
+        $label = $nodeType->onLabelCallback(new ModifiyNodeLabelEvent($label, $row, $image, $imageAttribute, $dc, $hasChilds));
 
         return $label;
     }

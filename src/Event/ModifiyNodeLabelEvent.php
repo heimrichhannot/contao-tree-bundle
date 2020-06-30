@@ -32,17 +32,22 @@ class ModifiyNodeLabelEvent
      * @var DataContainer
      */
     private $dc;
+    /**
+     * @var bool
+     */
+    private $hasChilds;
 
     /**
      * ModifiyNodeLabelEvent constructor.
      */
-    public function __construct(string $label, array $row, string $image, string $imageAttribute, DataContainer $dc)
+    public function __construct(string $label, array $row, string $image, string $imageAttribute, DataContainer $dc, bool $hasChilds)
     {
         $this->label = $label;
         $this->row = $row;
         $this->image = $image;
         $this->imageAttribute = $imageAttribute;
         $this->dc = $dc;
+        $this->hasChilds = $hasChilds;
     }
 
     public function getLabel(): string
@@ -68,5 +73,13 @@ class ModifiyNodeLabelEvent
     public function getDc(): DataContainer
     {
         return $this->dc;
+    }
+
+    /**
+     * @return bool
+     */
+    public function getHasChilds(): bool
+    {
+        return $this->hasChilds;
     }
 }
