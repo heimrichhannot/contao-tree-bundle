@@ -22,6 +22,7 @@ use Doctrine\DBAL\FetchMode;
 use Exception;
 use HeimrichHannot\TreeBundle\Collection\NodeTypeCollection;
 use HeimrichHannot\TreeBundle\Contao\Backend;
+use HeimrichHannot\TreeBundle\Event\ModifiyNodeLabelEvent;
 use HeimrichHannot\TreeBundle\Model\TreeModel;
 use HeimrichHannot\TreeBundle\TreeNode\AbstractTreeNode;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
@@ -53,12 +54,14 @@ class TreeContainer
 
     public function onLoadCallback(DataContainer $dc)
     {
-        $this->addBreadcrumb();
         $this->checkPermission();
         $node = TreeModel::findByPk($dc->id);
 
-        if (0 == $node->pid) {
+        if ($node && 0 == $node->pid) {
             $palettes = &$GLOBALS['TL_DCA']['tl_tree']['palettes'];
+            if (!isset($palettes[$node->type])) {
+                $node->type = 'default';
+            }
             $palettes[$node->type] = '{tree_legend},internalTitle;'.$palettes[$node->type];
         }
         $this->setRootType($dc);
@@ -200,6 +203,10 @@ class TreeContainer
         $nodeModel = TreeModel::findByPk($row['id']);
         $nodeType = $this->nodeTypeCollection->getNodeType($row['type']);
 
+        if (!$nodeType) {
+            return $label;
+        }
+
         if ($blnProtected) {
             $row['protected'] = true;
         }
@@ -221,7 +228,14 @@ class TreeContainer
             $label = '<span><strong>'.$row['internalTitle'].'</strong> <br /> <span style="display: inline-block; margin-left: 20px; margin-top: 5px;">'.$label.'</span></span>';
         }
 
-        return '<a href="'.Backend::addToUrl('do=feRedirect').'" onclick="return false;">'.Image::getHtml($image, '', $imageAttribute).'</a> <a href="" onclick="return false;">'.$label.'</a>';
+        $nodeTypeLabel = isset($GLOBALS['TL_LANG']['tl_tree']['TYPES'][$row['type']])
+            ? $GLOBALS['TL_LANG']['tl_tree']['TYPES'][$row['type']]
+            : $row['type'];
+
+        $label =  '<a href="'.Backend::addToUrl('do=feRedirect').'" onclick="return false;">'.Image::getHtml($image, '', $imageAttribute).'</a> <a href="" onclick="return false;">'.$label.'</a> <span style="color:#999;padding-left:3px">[' .$nodeTypeLabel .']</span>';
+
+        $label = $nodeType->onLabelCallback(new ModifiyNodeLabelEvent($label, $row, $image, $imageAttribute, $dc));
+        return $label;
     }
 
     /**
@@ -506,14 +520,6 @@ class TreeContainer
         }
 
         return false;
-    }
-
-    /**
-     * Add the breadcrumb menu.
-     */
-    public function addBreadcrumb()
-    {
-        Backend::addPagesBreadcrumb();
     }
 
     /**

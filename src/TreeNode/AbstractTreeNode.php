@@ -8,6 +8,8 @@
 
 namespace HeimrichHannot\TreeBundle\TreeNode;
 
+use Contao\DataContainer;
+use HeimrichHannot\TreeBundle\Event\ModifiyNodeLabelEvent;
 use HeimrichHannot\TreeBundle\Model\TreeModel;
 
 /**
@@ -75,6 +77,17 @@ abstract class AbstractTreeNode
      * Prepare the node context before rendering the node template.
      */
     abstract public function prepareNodeOutput(array $context, TreeModel $nodeModel): array;
+
+    /**
+     * Modify or override the backend label of the current node.
+     *
+     * @param ModifiyNodeLabelEvent $event
+     * @return string
+     */
+    public function onLabelCallback(ModifiyNodeLabelEvent $event): string
+    {
+        return $event->getLabel();
+    }
 
     /**
      * Return the node palette including legends.

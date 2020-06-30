@@ -17,12 +17,11 @@ class MemberNode extends AbstractTreeNode
 
     public static function getType(): string
     {
-        return 'member_node';
+        return 'member';
     }
 
     public function prepareNodeOutput(array $context, TreeModel $nodeModel): array
     {
-
         return $context;
     }
 

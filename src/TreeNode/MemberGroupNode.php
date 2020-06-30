@@ -17,7 +17,7 @@ class MemberGroupNode extends AbstractTreeNode
 
     public static function getType(): string
     {
-        return 'member_group_node';
+        return 'member_group';
     }
 
     public function prepareNodeOutput(array $context, TreeModel $nodeModel): array

@@ -77,10 +77,11 @@ class TreeGenerator
      * @throws \Twig\Error\RuntimeError
      * @throws \Twig\Error\SyntaxError
      */
-    protected function renderNode(TreeModel $parent): string
+    protected function renderNode(TreeModel $parent, int $depth = 0): string
     {
         $context = $parent->row();
         $context['childs'] = [];
+        $context['depth'] = $depth;
 
         $time = \Date::floorToMinute();
         $stmt = $this->connection->prepare("SELECT id FROM tl_tree WHERE pid=? AND (start='' OR start<=?) AND (stop='' OR stop>?) AND published='1' ORDER BY sorting ASC");
@@ -93,7 +94,7 @@ class TreeGenerator
                 if (!$childModel) {
                     continue;
                 }
-                $context['childs'][$child->id] = $this->renderNode($childModel);
+                $context['childs'][$child->id] = $this->renderNode($childModel, ++$depth);
             }
         }
 

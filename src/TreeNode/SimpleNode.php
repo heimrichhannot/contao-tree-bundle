@@ -14,7 +14,7 @@ class SimpleNode extends AbstractTreeNode
 {
     public static function getType(): string
     {
-        return 'simple_node';
+        return 'simple';
     }
 
     public function prepareNodeOutput(array $context, TreeModel $nodeModel): array
