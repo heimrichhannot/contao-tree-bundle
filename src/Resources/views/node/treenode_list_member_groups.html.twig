@@ -1,0 +1,24 @@
+{% extends '@HeimrichHannotTree/node/treenode_default.html.twig' %}
+{% block description %}
+    {{ parent() }}
+    {% if membergroups is defined and membergroups|length > 0 %}
+        {% for group in membergroups %}
+            {% block membergroup %}
+                <div class="membergroup">
+                    <span class="membergroup_title">{{ group.name|raw }}</span>
+                    {% if group.members is defined and group.members is not empty %}
+                        {% for member in group.members %}
+                            <div itemscope itemtype="http://schema.org/Person">
+                                <span itemprop="name">{{ member.firstname|default }} {{ member.lastname|default }}</span>
+                                {% if description is defined and description is not empty %}
+                                    <span itemprop="description">{{ description|default }}</span>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            {% endblock %}
+
+        {% endfor%}
+    {% endif %}
+{% endblock %}

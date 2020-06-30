@@ -11,9 +11,10 @@ $lang = &$GLOBALS['TL_LANG']['tl_tree'];
 $lang['TYPES']['mainroot'] = 'Baumstrukturen';
 $lang['TYPES']['simple'] = 'Einfacher Knoten';
 $lang['TYPES']['member'] = 'Mitglied-Knoten';
-$lang['TYPES']['member_group'] = 'Mitgliedergruppen-Knoten';
+$lang['TYPES']['member_groups'] = 'Mitgliedergruppen-Knoten';
 
-$lang['OUTPUTTYPES']['list'] = 'Liste';
+$lang['OUTPUTTYPES'][\HeimrichHannot\TreeBundle\OutputType\ListOutputType::getType()] = 'Liste';
+$lang['OUTPUTTYPES'][\HeimrichHannot\TreeBundle\OutputType\Bootstrap4AccordionOutputType::getType()] = 'Bootstrap 4 Accordion';
 
 /*
  * Buttons
