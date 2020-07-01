@@ -99,9 +99,18 @@ class TreeGenerator
      */
     protected function renderNode(TreeModel $currentNode, TreeModel $rootNode, int $depth = 0): string
     {
+        $nodeType = $this->nodeTypeCollection->getNodeType($currentNode->type);
+        $outputType = $this->outputTypeCollection->getType($rootNode->outputType ?: ListOutputType::getType());
+
         $context = $currentNode->row();
         $context['childs'] = [];
         $context['depth'] = $depth;
+        $context['cssClasses'] = $nodeType::getType().' depth_'.$depth;
+
+        if (0 === $depth) {
+            $context['cssClasses'] = 'huh_tree root';
+        }
+        $context['cssId'] = 'node_'.$currentNode->alias;
 
         $time = \Date::floorToMinute();
         $stmt = $this->connection->prepare("SELECT id FROM tl_tree WHERE pid=? AND (start='' OR start<=?) AND (stop='' OR stop>?) AND published='1' ORDER BY sorting ASC");
@@ -117,9 +126,6 @@ class TreeGenerator
                 $context['childs'][$child->id] = $this->renderNode($childModel, $rootNode, ++$depth);
             }
         }
-
-        $nodeType = $this->nodeTypeCollection->getNodeType($currentNode->type);
-        $outputType = $this->outputTypeCollection->getType($rootNode->outputType ?: ListOutputType::getType());
 
         $template = $this->getTemplate($nodeType, $outputType);
 

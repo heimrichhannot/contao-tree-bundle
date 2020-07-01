@@ -1,19 +1,24 @@
 {% if depth == 0  %}
-    <div class="{% block wrapperClasses %}{{ type }} depth_{{ depth }}{% endblock %}" id="node_{{ alias }}">
-        <span>{{ title }}</span>
+    {% block root_head %}
+        <div class="{{ cssClasses }}" id="{{ cssId }}">
+            <span>{{ title }}</span>
+    {% endblock %}
 {% else %}
-    <div class="card" id="node_{{ alias }}">
-        <div class="card-header" id="node_{{ alias }}_header">
+    {% block node_head %}
+    <div class="{{ cssClasses }} card" id="{{ cssId }}">
+        <div class="card-header" id="{{ cssId }}_header">
+            {% block card-header %}
             <h2 class="mb-0">
-                <button class="btn btn-link btn-block text-left" type="button" data-toggle="collapse" data-target="#node_{{ alias }}_body" aria-expanded="false" aria-controls="node_{{ alias }}_body">
+                <button class="btn btn-link btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#{{ cssId }}_body" aria-expanded="false" aria-controls="{{ cssId }}_body">
                     {{ title }}
                 </button>
             </h2>
+            {% endblock %}
         </div>
 
-        <div id="node_{{ alias }}_body" class="collapse" aria-labelledby="node_{{ alias }}_header" data-parent="#{{ parentNode.alias }}_child">
+        <div id="{{ cssId }}_body" class="collapse" aria-labelledby="{{ cssId }}_header" data-parent="#{{ parentNode.alias }}_childs">
             <div class="card-body">
-
+    {% endblock %}
 {% endif %}
 
 {% block description %}
@@ -22,7 +27,7 @@
     {% endif %}
 {% endblock %}
 {% if childs|length > 0 %}
-    <div class="accordion" id="{{ alias }}_child">
+    <div class="accordion" id="{{ alias }}_childs">
         {% for child in childs %}
             {% block child %}
                 {{ child|raw }}
@@ -32,9 +37,13 @@
 {% endif %}
 
 {% if depth == 0  %}
-    </div>
+    {% block root_footer %}
+        </div>
+    {% endblock %}
 {% else %}
+    {% block node_footer %}
             </div>
         </div>
     </div>
+    {% endblock %}
 {% endif %}
