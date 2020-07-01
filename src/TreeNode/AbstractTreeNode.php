@@ -88,6 +88,15 @@ abstract class AbstractTreeNode
     }
 
     /**
+     * Return the node type name that should be used for template.
+     * Override this method, if you want to use a template of an different node type for this node type.
+     */
+    public function getTemplateTypeName(): string
+    {
+        return static::getType();
+    }
+
+    /**
      * Return the node palette including legends.
      *
      * "{title_legend},title,alias,type;" is always prepended, so don't add it here.

@@ -108,7 +108,7 @@ class TreeGenerator
         $context['cssClasses'] = $nodeType::getType().' depth_'.$depth;
 
         if (0 === $depth) {
-            $context['cssClasses'] = 'huh_tree root';
+            $context['cssClasses'] .= ' huh_tree root';
         }
         $context['cssId'] = 'node_'.$currentNode->alias;
 
@@ -142,9 +142,9 @@ class TreeGenerator
             return $this->templateCache[$nodeType::getType()];
         }
         $templateHierarchy = [
-            'treenode_'.$outputType::getType().'_'.$nodeType::getType(),
+            'treenode_'.$outputType::getType().'_'.$nodeType->getTemplateTypeName(),
             'treenode_'.$outputType::getType().'_default',
-            'treenode_'.$nodeType::getType(),
+            'treenode_'.$nodeType->getTemplateTypeName(),
             'treenode_default',
         ];
 

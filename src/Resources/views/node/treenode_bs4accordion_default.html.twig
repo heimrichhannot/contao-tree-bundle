@@ -7,8 +7,8 @@
     {% block node_head %}
     <div class="{{ cssClasses }} card" id="{{ cssId }}">
         <div class="card-header" id="{{ cssId }}_header">
-            {% block card-header %}
-            <h2 class="mb-0">
+            {% block card_header %}
+            <h2 class="{{ headlineCssClass|default('mb-0') }}">
                 <button class="btn btn-link btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#{{ cssId }}_body" aria-expanded="false" aria-controls="{{ cssId }}_body">
                     {{ title }}
                 </button>
