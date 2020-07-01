@@ -11,6 +11,7 @@ $lang = &$GLOBALS['TL_LANG']['tl_tree'];
 $lang['TYPES']['mainroot'] = 'Baumstrukturen';
 $lang['TYPES']['simple'] = 'Einfacher Knoten';
 $lang['TYPES']['member'] = 'Mitglied-Knoten';
+$lang['TYPES']['member_group'] = 'Mitgliedergruppe-Knoten';
 $lang['TYPES']['member_groups'] = 'Mitgliedergruppen-Knoten';
 
 $lang['OUTPUTTYPES'][\HeimrichHannot\TreeBundle\OutputType\ListOutputType::getType()] = 'Liste';
@@ -46,6 +47,8 @@ $lang['description'][0] = 'Beschreibung';
 $lang['description'][1] = 'Hier können Sie eine Beschreibung zum Knoten angeben. Diese kann im Frontend ausgegeben werden.';
 $lang['member'][0] = 'Mitglied';
 $lang['member'][1] = 'Hier können Sie dem Knoten ein Mitglied zuordnen';
+$lang['group'][0] = 'Mitgliedergruppe';
+$lang['group'][1] = 'Hier können Sie dem Knoten eine Mitgliedergruppe zuordnen';
 $lang['groups'][0] = 'Mitgliedergruppen';
 $lang['groups'][1] = 'Hier können Sie dem Knoten Mitgliedergruppen zuordnen';
 $lang['published'][0] = 'Knoten veröffentlichen';

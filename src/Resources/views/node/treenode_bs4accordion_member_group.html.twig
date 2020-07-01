@@ -1,0 +1,5 @@
+{% extends '@HeimrichHannotTree/node/treenode_bs4accordion_default.html.twig' %}
+{% block description %}
+    {{ parent() }}
+    {{ block('membergroup', '@HeimrichHannotTree/node/treenode_list_member_group.html.twig') }}
+{% endblock %}
