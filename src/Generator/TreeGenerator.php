@@ -123,7 +123,7 @@ class TreeGenerator
                 if (!$childModel) {
                     continue;
                 }
-                $context['childs'][$child->id] = $this->renderNode($childModel, $rootNode, ++$depth);
+                $context['childs'][$child->id] = $this->renderNode($childModel, $rootNode, ($depth + 1));
             }
         }
 
