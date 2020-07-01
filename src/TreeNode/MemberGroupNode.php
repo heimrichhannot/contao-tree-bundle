@@ -22,11 +22,11 @@ class MemberGroupNode extends AbstractTreeNode
     /**
      * @var ModelUtil
      */
-    private $modelUtil;
+    protected $modelUtil;
     /**
      * @var MemberUtil
      */
-    private $memberUtil;
+    protected $memberUtil;
 
     /**
      * MemberGroupNode constructor.

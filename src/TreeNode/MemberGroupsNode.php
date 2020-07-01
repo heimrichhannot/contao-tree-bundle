@@ -9,7 +9,6 @@
 namespace HeimrichHannot\TreeBundle\TreeNode;
 
 use Contao\MemberGroupModel;
-use Contao\MemberModel;
 use Contao\Model\Collection;
 use Contao\StringUtil;
 use HeimrichHannot\TreeBundle\Event\BeforeRenderNodeEvent;
@@ -24,11 +23,11 @@ class MemberGroupsNode extends AbstractTreeNode
     /**
      * @var ModelUtil
      */
-    private $modelUtil;
+    protected $modelUtil;
     /**
      * @var MemberUtil
      */
-    private $memberUtil;
+    protected $memberUtil;
 
     /**
      * MemberGroupNode constructor.
@@ -70,11 +69,13 @@ class MemberGroupsNode extends AbstractTreeNode
     public function onBeforeRenderEvent(BeforeRenderNodeEvent $event): void
     {
         $groupIds = StringUtil::deserialize($event->getTreeModel()->groups);
+
         if (empty($groupIds)) {
             return;
         }
         /** @var Collection|MemberGroupModel[]|MemberGroupModel|null $groups */
         $groups = $this->modelUtil->findMultipleModelInstancesByIds('tl_member_group', $groupIds);
+
         if (!$groups) {
             return;
         }
@@ -83,6 +84,7 @@ class MemberGroupsNode extends AbstractTreeNode
         foreach ($groups as $group) {
             $context['membergroups'][$group->id] = $group->row();
             $members = $this->memberUtil->findActiveByGroups([$group->id], ['ignoreLogin' => true]);
+
             if ($members) {
                 foreach ($members as $member) {
                     $context['membergroups'][$group->id]['members'][] = $member->row();
@@ -91,7 +93,6 @@ class MemberGroupsNode extends AbstractTreeNode
         }
         $event->setContext($context);
     }
-
 
     protected function getPalette(): string
     {
