@@ -72,7 +72,7 @@ class TreeGenerator
     /**
      * Render a tree.
      */
-    public function renderTree(int $rootNodeId): string
+    public function renderTree(int $rootNodeId, ?AbstractOutputType $outputType = null): string
     {
         $rootNode = TreeModel::findByPk($rootNodeId);
 
@@ -86,7 +86,11 @@ class TreeGenerator
             return '';
         }
 
-        return $this->renderNode($rootNode, $rootNode);
+        if (!$outputType) {
+            $outputType = $this->outputTypeCollection->getType($rootNode->outputType ?: ListOutputType::getType());
+        }
+
+        return $this->renderNode($rootNode, $outputType);
     }
 
     /**
@@ -97,10 +101,9 @@ class TreeGenerator
      * @throws \Twig\Error\RuntimeError
      * @throws \Twig\Error\SyntaxError
      */
-    protected function renderNode(TreeModel $currentNode, TreeModel $rootNode, int $depth = 0): string
+    protected function renderNode(TreeModel $currentNode, AbstractOutputType $outputType, int $depth = 0): string
     {
         $nodeType = $this->nodeTypeCollection->getNodeType($currentNode->type);
-        $outputType = $this->outputTypeCollection->getType($rootNode->outputType ?: ListOutputType::getType());
 
         $context = $currentNode->row();
         $context['childs'] = [];
@@ -123,7 +126,7 @@ class TreeGenerator
                 if (!$childModel) {
                     continue;
                 }
-                $context['childs'][$child->id] = $this->renderNode($childModel, $rootNode, ($depth + 1));
+                $context['childs'][$child->id] = $this->renderNode($childModel, $outputType, ($depth + 1));
             }
         }
 
