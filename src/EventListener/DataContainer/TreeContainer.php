@@ -23,9 +23,11 @@ use Exception;
 use HeimrichHannot\TreeBundle\Collection\NodeTypeCollection;
 use HeimrichHannot\TreeBundle\Collection\OutputTypeCollection;
 use HeimrichHannot\TreeBundle\Contao\Backend;
+use HeimrichHannot\TreeBundle\Event\AllowedChildrenEvent;
 use HeimrichHannot\TreeBundle\Event\ModifiyNodeLabelCallback;
 use HeimrichHannot\TreeBundle\Model\TreeModel;
 use HeimrichHannot\TreeBundle\TreeNode\AbstractTreeNode;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
 
 class TreeContainer
@@ -49,13 +51,18 @@ class TreeContainer
      * @var OutputTypeCollection
      */
     private $outputTypeCollection;
+    /**
+     * @var EventDispatcherInterface
+     */
+    private $eventDispatcher;
 
-    public function __construct(Connection $connection, NodeTypeCollection $collection, SessionInterface $session, OutputTypeCollection $outputTypeCollection)
+    public function __construct(Connection $connection, NodeTypeCollection $collection, SessionInterface $session, OutputTypeCollection $outputTypeCollection, EventDispatcherInterface $eventDispatcher)
     {
         $this->connection = $connection;
         $this->nodeTypeCollection = $collection;
         $this->session = $session;
         $this->outputTypeCollection = $outputTypeCollection;
+        $this->eventDispatcher = $eventDispatcher;
     }
 
     public function onLoadCallback(DataContainer $dc)
@@ -86,10 +93,15 @@ class TreeContainer
                 throw new Exception($GLOBALS['TL_LANG']['ERR']['huh_tree_topLevelNode']);
             }
         } else {
-            $parentNodeModel = TreeModel::findByPk($dc->pid);
+            $parentNodeModel = TreeModel::findByPk($dc->activeRecord->pid);
 
             if ($parentNodeModel && ($parentNodeType = $this->nodeTypeCollection->getNodeType($parentNodeModel->type))) {
                 $allowedNodeTypes = $parentNodeType->getAllowedChildren();
+
+                $event = $this->eventDispatcher->dispatch(
+                    AllowedChildrenEvent::NAME,
+                    new AllowedChildrenEvent($allowedNodeTypes, $parentNodeModel ?: null, $dc->activeRecord->id)
+                );
 
                 if (!\in_array($varValue, $allowedNodeTypes)) {
                     throw new Exception(sprintf($GLOBALS['TL_LANG']['ERR']['huh_tree_nodeTypeNotAllowed'], $varValue));
@@ -167,12 +179,11 @@ class TreeContainer
      */
     public function onTypeOptionsCallback(DataContainer $dc)
     {
-        $user = BackendUser::getInstance();
         $arrOptions = [];
         $allowedNodeTypes = null;
 
         if ($dc->activeRecord && 0 == $dc->activeRecord->pid) {
-            $nodeTypes = $this->nodeTypeCollection->getRootNodeTypes();
+            $arrOptions = $this->nodeTypeCollection->getRootNodeTypes();
         } else {
             $nodeTypes = $this->nodeTypeCollection->getBranchNodeTypes();
             $parentNodeModel = TreeModel::findByPk($dc->activeRecord->pid);
@@ -180,14 +191,18 @@ class TreeContainer
             if ($parentNodeModel && ($parentNodeType = $this->nodeTypeCollection->getNodeType($parentNodeModel->type))) {
                 $allowedNodeTypes = $parentNodeType->getAllowedChildren();
             }
-        }
 
-        foreach ($nodeTypes as $nodeType) {
-            if ($nodeType != $dc->value && $allowedNodeTypes && !\in_array($nodeType, $allowedNodeTypes)) {
-                continue;
+            foreach ($nodeTypes as $nodeType) {
+                if ($allowedNodeTypes && !\in_array($nodeType, $allowedNodeTypes)) {
+                    continue;
+                }
+                $arrOptions[] = $nodeType;
             }
-
-            $arrOptions[] = $nodeType;
+            $event = $this->eventDispatcher->dispatch(
+                AllowedChildrenEvent::NAME,
+                new AllowedChildrenEvent($arrOptions, $parentNodeModel ?: null, $dc->activeRecord->id)
+            );
+            $arrOptions = $event->getAllowedChildren();
         }
 
         return $arrOptions;

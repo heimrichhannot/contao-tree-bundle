@@ -26,15 +26,18 @@
         <p>{{ description }}</p>
     {% endif %}
 {% endblock %}
-{% if childs|length > 0 %}
-    <div class="accordion" id="{{ alias }}_childs">
-        {% for child in childs %}
-            {% block child %}
-                {{ child|raw }}
-            {% endblock %}
-        {% endfor %}
-    </div>
-{% endif %}
+
+{% block children %}
+    {% if childs|length > 0 %}
+        <div class="accordion" id="{{ alias }}_childs">
+            {% for child in childs %}
+                {% block child %}
+                    {{ child|raw }}
+                {% endblock %}
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endblock %}
 
 {% if depth == 0  %}
     {% block root_footer %}
