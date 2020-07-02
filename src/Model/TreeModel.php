@@ -24,6 +24,7 @@ use Contao\Model\Collection;
  * @property string $type;
  * @property string $outputType;
  * @property int    $member;
+ * @property int    $members;
  * @property int    $group;
  * @property string $groups;
  * @property string $description;

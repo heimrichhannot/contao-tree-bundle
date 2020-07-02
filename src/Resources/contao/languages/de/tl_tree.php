@@ -11,6 +11,7 @@ $lang = &$GLOBALS['TL_LANG']['tl_tree'];
 $lang['TYPES']['mainroot'] = 'Baumstrukturen';
 $lang['TYPES']['simple'] = 'Einfacher Knoten';
 $lang['TYPES']['member'] = 'Mitglied-Knoten';
+$lang['TYPES']['members'] = 'Mitglieder-Knoten';
 $lang['TYPES']['member_group'] = 'Mitgliedergruppe-Knoten';
 $lang['TYPES']['member_groups'] = 'Mitgliedergruppen-Knoten';
 
