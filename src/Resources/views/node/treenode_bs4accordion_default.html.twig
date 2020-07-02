@@ -17,7 +17,7 @@
         </div>
 
         <div id="{{ cssId }}_body" class="collapse" aria-labelledby="{{ cssId }}_header" data-parent="#{{ parentNode.alias }}_childs">
-            <div class="card-body">
+            <div class="card-body {{ cardBodyCssClass|default }}">
     {% endblock %}
 {% endif %}
 

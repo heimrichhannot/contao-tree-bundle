@@ -103,7 +103,9 @@ class TreeContainer
                     new AllowedChildrenEvent($allowedNodeTypes, $parentNodeModel ?: null, $dc->activeRecord->id)
                 );
 
-                if (!\in_array($varValue, $allowedNodeTypes)) {
+                $allowedNodeTypes = $event->getAllowedChildren();
+
+                if ($allowedNodeTypes && !\in_array($varValue, $allowedNodeTypes)) {
                     throw new Exception(sprintf($GLOBALS['TL_LANG']['ERR']['huh_tree_nodeTypeNotAllowed'], $varValue));
                 }
             }
@@ -261,12 +263,16 @@ class TreeContainer
         }
 
         if ($nodeModel->isRootNode()) {
-            if ($hasChilds) {
-                $margin = '40';
+            if (!empty($label)) {
+                if ($hasChilds) {
+                    $margin = '40';
+                } else {
+                    $margin = '20';
+                }
+                $label = '<span><strong>'.$row['internalTitle'].'</strong> <br /> <span style="display: inline-block; margin-left: '.$margin.'px; margin-top: 5px;">'.$label.'</span></span>';
             } else {
-                $margin = '20';
+                $label = '<span><strong>'.$row['internalTitle'].'</strong>';
             }
-            $label = '<span><strong>'.$row['internalTitle'].'</strong> <br /> <span style="display: inline-block; margin-left: '.$margin.'px; margin-top: 5px;">'.$label.'</span></span>';
         }
 
         $nodeTypeLabel = isset($GLOBALS['TL_LANG']['tl_tree']['TYPES'][$row['type']])

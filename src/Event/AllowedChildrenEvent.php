@@ -16,7 +16,7 @@ class AllowedChildrenEvent extends Event
     const NAME = 'huh.tree.allowed_children';
 
     /**
-     * @var array
+     * @var array|null
      */
     private $allowedChildren;
     /**
@@ -28,14 +28,17 @@ class AllowedChildrenEvent extends Event
      */
     private $currentNodeId;
 
-    public function __construct(array $allowedChildren, TreeModel $parentNodeModel, int $currentNodeId)
+    public function __construct(?array $allowedChildren, TreeModel $parentNodeModel, int $currentNodeId)
     {
         $this->allowedChildren = $allowedChildren;
         $this->parentNodeModel = $parentNodeModel;
         $this->currentNodeId = $currentNodeId;
     }
 
-    public function getAllowedChildren(): array
+    /**
+     * Is null if no restrictions.
+     */
+    public function getAllowedChildren(): ?array
     {
         return $this->allowedChildren;
     }
@@ -50,7 +53,7 @@ class AllowedChildrenEvent extends Event
         return $this->currentNodeId;
     }
 
-    public function setAllowedChildren(array $allowedChildren): void
+    public function setAllowedChildren(?array $allowedChildren): void
     {
         $this->allowedChildren = $allowedChildren;
     }
