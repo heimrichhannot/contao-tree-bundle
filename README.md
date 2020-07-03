@@ -18,3 +18,6 @@ Install with composer or contao manager and update the database afterwards.
 
 ### Setup
 
+1. In Contao backend you find a new backend module tree structures within content section
+1. Create a root node and add child nodes as you want
+1. To output it in the frontend, create a Tree content element and select the created root.

@@ -78,7 +78,7 @@ class MembersNode extends AbstractTreeNode
     {
         $memberIds = StringUtil::deserialize($event->getTreeModel()->members);
         /** @var Collection|MemberModel[]|MemberModel|null $memberModels */
-        if (!$memberIds || !($memberModels = $this->modelUtil->findMultipleModelInstancesByIds('tl_member', $memberIds))) {
+        if (!$memberIds || !($memberModels = $this->modelUtil->findMultipleModelInstancesByIds('tl_member', $memberIds, ['order' => "FIELD(id, '".implode("', '", $memberIds)."')"]))) {
             return;
         }
         $context = $event->getContext();
