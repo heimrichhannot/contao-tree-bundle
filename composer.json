@@ -1,7 +1,7 @@
 {
   "name": "heimrichhannot/contao-tree-bundle",
   "description": "A contao bundle to create a tree structure like an organization chart in the contao backend and output it in the frontend.",
-  "license": "proprietary",
+  "license": "LGPL-3.0-or-later",
   "authors": [
     {
       "name": "Heimrich & Hannot GmbH",
