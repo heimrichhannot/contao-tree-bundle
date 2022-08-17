@@ -1,7 +1,7 @@
 <?php
 
 /*
- * Copyright (c) 2020 Heimrich & Hannot GmbH
+ * Copyright (c) 2022 Heimrich & Hannot GmbH
  *
  * @license LGPL-3.0-or-later
  */
@@ -77,7 +77,7 @@ class TreeGenerator
         $rootNode = TreeModel::findByPk($rootNodeId);
 
         if (!$rootNode || !$rootNode->isRootNode()) {
-            trigger_error('Tree node does not exist or is not a root node.', E_USER_WARNING);
+            trigger_error('Tree node does not exist or is not a root node.', \E_USER_WARNING);
 
             if ($this->kernel->isDebug()) {
                 return '<!-- Tree node does not exist or is not a root node. -->';
@@ -134,7 +134,7 @@ class TreeGenerator
 
         $this->eventDispatcher->addListener(BeforeRenderNodeEvent::NAME, [$nodeType, 'onBeforeRenderEvent'], 200);
         $this->eventDispatcher->addListener(BeforeRenderNodeEvent::NAME, [$outputType, 'onBeforeRenderEvent'], 100);
-        $event = $this->eventDispatcher->dispatch(BeforeRenderNodeEvent::NAME, new BeforeRenderNodeEvent($context, $currentNode, $template));
+        $event = $this->eventDispatcher->dispatch(new BeforeRenderNodeEvent($context, $currentNode, $template), BeforeRenderNodeEvent::NAME);
 
         return $this->twig->render($event->getTemplate(), $event->getContext());
     }

@@ -20,4 +20,5 @@ services:
   HeimrichHannot\TreeBundle\Collection\OutputTypeCollection:
     arguments: [!tagged huh.tree.output_type]
 
-  HeimrichHannot\TreeBundle\Generator\TreeGenerator: ~
+  HeimrichHannot\TreeBundle\Generator\TreeGenerator:
+    public: true

@@ -1,7 +1,7 @@
 <?php
 
 /*
- * Copyright (c) 2020 Heimrich & Hannot GmbH
+ * Copyright (c) 2022 Heimrich & Hannot GmbH
  *
  * @license LGPL-3.0-or-later
  */
@@ -99,8 +99,8 @@ class TreeContainer
                 $allowedNodeTypes = $parentNodeType->getAllowedChildren();
 
                 $event = $this->eventDispatcher->dispatch(
-                    AllowedChildrenEvent::NAME,
-                    new AllowedChildrenEvent($allowedNodeTypes, $parentNodeModel ?: null, $dc->activeRecord->id)
+                    new AllowedChildrenEvent($allowedNodeTypes, $parentNodeModel ?: null, $dc->activeRecord->id),
+                    AllowedChildrenEvent::NAME
                 );
 
                 $allowedNodeTypes = $event->getAllowedChildren();
@@ -201,8 +201,8 @@ class TreeContainer
                 $arrOptions[] = $nodeType;
             }
             $event = $this->eventDispatcher->dispatch(
-                AllowedChildrenEvent::NAME,
-                new AllowedChildrenEvent($arrOptions, $parentNodeModel ?: null, $dc->activeRecord->id)
+                new AllowedChildrenEvent($arrOptions, $parentNodeModel ?: null, $dc->activeRecord->id),
+                AllowedChildrenEvent::NAME
             );
             $arrOptions = $event->getAllowedChildren();
         }
