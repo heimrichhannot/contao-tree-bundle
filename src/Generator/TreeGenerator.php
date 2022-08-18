@@ -9,7 +9,6 @@
 namespace HeimrichHannot\TreeBundle\Generator;
 
 use Doctrine\DBAL\Connection;
-use Doctrine\DBAL\FetchMode;
 use HeimrichHannot\TreeBundle\Collection\NodeTypeCollection;
 use HeimrichHannot\TreeBundle\Collection\OutputTypeCollection;
 use HeimrichHannot\TreeBundle\Event\BeforeRenderNodeEvent;
@@ -17,6 +16,7 @@ use HeimrichHannot\TreeBundle\Model\TreeModel;
 use HeimrichHannot\TreeBundle\OutputType\AbstractOutputType;
 use HeimrichHannot\TreeBundle\OutputType\ListOutputType;
 use HeimrichHannot\TreeBundle\TreeNode\AbstractTreeNode;
+use HeimrichHannot\TwigSupportBundle\Filesystem\TwigTemplateLocator;
 use HeimrichHannot\UtilsBundle\Template\TemplateUtil;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpKernel\KernelInterface;
@@ -57,8 +57,12 @@ class TreeGenerator
      * @var OutputTypeCollection
      */
     private $outputTypeCollection;
+    /**
+     * @var TwigTemplateLocator
+     */
+    private $twigTemplateLocator;
 
-    public function __construct(KernelInterface $kernel, Connection $connection, Environment $twig, NodeTypeCollection $nodeTypeCollection, EventDispatcherInterface $eventDispatcher, TemplateUtil $templateUtil, OutputTypeCollection $outputTypeCollection)
+    public function __construct(KernelInterface $kernel, Connection $connection, Environment $twig, NodeTypeCollection $nodeTypeCollection, EventDispatcherInterface $eventDispatcher, TemplateUtil $templateUtil, OutputTypeCollection $outputTypeCollection, TwigTemplateLocator $twigTemplateLocator)
     {
         $this->kernel = $kernel;
         $this->connection = $connection;
@@ -67,6 +71,7 @@ class TreeGenerator
         $this->eventDispatcher = $eventDispatcher;
         $this->templateUtil = $templateUtil;
         $this->outputTypeCollection = $outputTypeCollection;
+        $this->twigTemplateLocator = $twigTemplateLocator;
     }
 
     /**
@@ -116,17 +121,19 @@ class TreeGenerator
         $context['cssId'] = 'node_'.$currentNode->alias;
 
         $time = \Date::floorToMinute();
-        $stmt = $this->connection->prepare("SELECT id FROM tl_tree WHERE pid=? AND (start='' OR start<=?) AND (stop='' OR stop>?) AND published='1' ORDER BY sorting ASC");
-        $stmt->execute([$currentNode->id, $time, $time + 60]);
+        $stmt = $this->connection->prepare(
+            "SELECT id FROM tl_tree WHERE pid=? AND (start='' OR start<=?) AND (stop='' OR stop>?) AND published='1' ORDER BY sorting ASC"
+        );
+        $result = $stmt->executeQuery([$currentNode->id, $time, $time + 60]);
 
-        if ($stmt->rowCount() > 0) {
-            while ($child = $stmt->fetch(FetchMode::STANDARD_OBJECT)) {
-                $childModel = TreeModel::findByPk($child->id);
+        if ($result->rowCount() > 0) {
+            while ($child = $result->fetchAssociative()) {
+                $childModel = TreeModel::findByPk($child['id'] ?? 0);
 
                 if (!$childModel) {
                     continue;
                 }
-                $context['childs'][$child->id] = $this->renderNode($childModel, $outputType, ($depth + 1));
+                $context['childs'][$child['id']] = $this->renderNode($childModel, $outputType, ($depth + 1));
             }
         }
 
@@ -153,7 +160,7 @@ class TreeGenerator
 
         foreach ($templateHierarchy as $template) {
             try {
-                $template = $this->templateUtil->getTemplate($template);
+                $template = $this->twigTemplateLocator->getTemplatePath($template);
             } catch (LoaderError $e) {
                 continue;
             }
