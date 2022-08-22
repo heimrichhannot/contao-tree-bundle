@@ -1,7 +1,7 @@
 <?php
 
 /*
- * Copyright (c) 2020 Heimrich & Hannot GmbH
+ * Copyright (c) 2022 Heimrich & Hannot GmbH
  *
  * @license LGPL-3.0-or-later
  */
@@ -14,6 +14,9 @@ use Contao\System;
 use HeimrichHannot\TreeBundle\Generator\TreeGenerator;
 use HeimrichHannot\TreeBundle\Model\TreeModel;
 
+/**
+ * @property int $huhTree
+ */
 class TreeElement extends ContentElement
 {
     const TYPE = 'huh_tree_element';

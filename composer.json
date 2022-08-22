@@ -10,7 +10,9 @@
   ],
   "require": {
     "php": "^7.4 || ^8.0",
-    "contao/core-bundle": "^4.9",
+    "contao/core-bundle": "^4.9.31",
+    "contao/manager-plugin": "^2.0",
+    "doctrine/dbal": "^2.12 || ^3.0",
     "heimrichhannot/contao-utils-bundle": "^2.171",
     "heimrichhannot/contao-twig-support-bundle": "^1.5.9",
     "symfony/event-dispatcher-contracts": "^1.0 || ^2.0 || ^3.0"

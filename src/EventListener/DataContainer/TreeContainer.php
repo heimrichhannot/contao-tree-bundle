@@ -12,6 +12,7 @@ use Contao\BackendUser;
 use Contao\CoreBundle\Exception\AccessDeniedException;
 use Contao\Database;
 use Contao\DataContainer;
+use Contao\Date;
 use Contao\Image;
 use Contao\Input;
 use Contao\StringUtil;
@@ -67,7 +68,7 @@ class TreeContainer
 
     public function onLoadCallback(DataContainer $dc)
     {
-        $this->checkPermission();
+        $this->checkPermission($dc);
         $node = TreeModel::findByPk($dc->id);
 
         if ($node && 0 == $node->pid) {
@@ -130,11 +131,11 @@ class TreeContainer
             $GLOBALS['TL_DCA']['tl_tree']['fields']['type']['default'] = $defaultRootPageType;
         } elseif (1 == Input::get('mode')) {
             $stmt = $this->connection->prepare('SELECT * FROM '.$dc->table.' WHERE id=? LIMIT 1');
-            $stmt->execute([Input::get('pid')]);
+            $result = $stmt->executeQuery([Input::get('pid')]);
 
-            $node = $stmt->fetch();
+            $node = $result->fetchAssociative();
 
-            if (0 == $node['pid']) {
+            if ($node && 0 == $node['pid']) {
                 $GLOBALS['TL_DCA']['tl_tree']['fields']['type']['default'] = $defaultRootPageType;
             }
         }
@@ -160,10 +161,10 @@ class TreeContainer
         }
 
         $stmt = $this->connection->prepare('SELECT id FROM tl_tree WHERE id=? OR alias=?');
-        $stmt->execute([$dc->id, $varValue]);
+        $result = $stmt->executeQuery([$dc->id, $varValue]);
 
         // Check whether the page alias exists
-        if ($stmt->rowCount() > ($autoAlias ? 0 : 1)) {
+        if ($result->rowCount() > ($autoAlias ? 0 : 1)) {
             if (!$autoAlias) {
                 throw new \Exception(sprintf($GLOBALS['TL_LANG']['ERR']['aliasExists'], $varValue));
             }
@@ -245,13 +246,13 @@ class TreeContainer
             $row['protected'] = true;
         }
 
-        $time = \Date::floorToMinute();
+        $time = Date::floorToMinute();
 
         $published = (('' == $row['start'] || $row['start'] <= $time) && ('' == $row['stop'] || $row['stop'] > ($time + 60)) && '1' == $row['published']);
 
         $stmt = $this->connection->prepare('SELECT id FROM tl_tree WHERE pid=?');
-        $stmt->execute([$row['id']]);
-        $hasChilds = ($stmt->rowCount() > 0);
+        $count = $stmt->executeStatement([$row['id']]);
+        $hasChilds = ($count > 0);
 
         $image = $nodeType->getIcon($published ? AbstractTreeNode::ICON_STATE_PUBLISHED : AbstractTreeNode::ICON_STATE_UNPUBLISHED);
 
@@ -275,9 +276,7 @@ class TreeContainer
             }
         }
 
-        $nodeTypeLabel = isset($GLOBALS['TL_LANG']['tl_tree']['TYPES'][$row['type']])
-            ? $GLOBALS['TL_LANG']['tl_tree']['TYPES'][$row['type']]
-            : $row['type'];
+        $nodeTypeLabel = $GLOBALS['TL_LANG']['tl_tree']['TYPES'][$row['type']] ?? $row['type'];
 
         $label = '<a href="'.Backend::addToUrl('do=feRedirect').'" onclick="return false;">'.Image::getHtml($image, '', $imageAttribute).'</a> <a href="" onclick="return false;">'.$label.'</a> <span style="color:#999;padding-left:3px">['.$nodeTypeLabel.']</span>';
 
@@ -291,7 +290,7 @@ class TreeContainer
      *
      * @throws AccessDeniedException
      */
-    public function checkPermission(): void
+    public function checkPermission(DataContainer $dc): void
     {
         $user = BackendUser::getInstance();
 
@@ -327,17 +326,18 @@ class TreeContainer
             $stmt = $this->connection->prepare('SELECT id, pid, type FROM tl_tree WHERE id=? LIMIT 1');
 
             foreach ($session['CURRENT']['IDS'] as $id) {
-                $stmt->execute([$id]);
-                $nodeData = $stmt->fetch(FetchMode::STANDARD_OBJECT);
+                $result = $stmt->executeQuery([$id]);
+
+                if ($result->rowCount() < 1) {
+                    continue;
+                }
+                $nodeData = (object) $result->fetchAssociative();
 
 //                $objPage = $this->Database->prepare("SELECT id, pid, type, includeChmod, chmod, cuser, cgroup FROM tl_page WHERE id=?")
 //                    ->limit(1)
 //                    ->execute($id);
 
 //                if ($objPage->numRows < 1 || !$user->hasAccess($objPage->type, 'alpty'))
-                if (!$nodeData) {
-                    continue;
-                }
 
                 if ($this->hasAccess((int) $nodeData->id, $user, $root)) {
                     $edit_all[] = $id;
@@ -364,21 +364,12 @@ class TreeContainer
             $stmt = $this->connection->prepare('SELECT id, pid, type FROM tl_tree WHERE id=? LIMIT 1');
 
             foreach ($session['CLIPBOARD']['tl_tree']['id'] as $id) {
-                $stmt->execute([$id]);
-                $nodeData = $stmt->fetch(FetchMode::STANDARD_OBJECT);
+                $result = $stmt->executeQuery([$id]);
 
-//                $objPage = $this->Database->prepare("SELECT id, pid, type, includeChmod, chmod, cuser, cgroup FROM tl_page WHERE id=?")
-//                    ->limit(1)
-//                    ->execute($id);
-
-                if (!$nodeData) {
+                if ($result->rowCount() < 1) {
                     continue;
                 }
-
-//                if ($objPage->numRows < 1 || !$this->User->hasAccess($objPage->type, 'alpty'))
-//                {
-//                    continue;
-//                }
+                $nodeData = (object) $result->fetchAssociative();
 
                 if ($this->hasAccess((int) $nodeData->id, $user, $root)) {
                     $clipboard[] = $id;
@@ -407,7 +398,7 @@ class TreeContainer
         // Check current action
         if (Input::get('act') && 'paste' != Input::get('act')) {
             $permission = 0;
-            $cid = CURRENT_ID ?: Input::get('id');
+            $cid = $dc->currentPid ?: Input::get('id');
             $ids = ('' != $cid) ? [$cid] : [];
 
             // Set permission
@@ -437,9 +428,11 @@ class TreeContainer
                     // Check the parent's parent page in "paste after" mode
                     else {
                         $stmt = $this->connection->prepare('SELECT pid FROM tl_tree WHERE id=?');
-                        $stmt->execute([Input::get('pid')]);
-                        $node = $stmt->fetch(FetchMode::STANDARD_OBJECT);
-                        $ids[] = $node->pid;
+                        $result = $stmt->executeQuery([Input::get('pid')]);
+
+                        if ($result->rowCount() > 0) {
+                            $ids[] = $result->fetchAssociative()['pid'];
+                        }
                     }
 
                     break;
@@ -487,15 +480,12 @@ class TreeContainer
                 }
 
                 // Get the page object
-                $stmt->execute([$id]);
-//                $objPage = $this->Database->prepare("SELECT * FROM tl_page WHERE id=?")
-//                    ->limit(1)
-//                    ->execute($id);
-                $nodeData = $stmt->fetch(FetchMode::STANDARD_OBJECT);
+                $result = $stmt->executeQuery([$id]);
 
-                if (!$nodeData) {
+                if ($result->rowCount() < 1) {
                     continue;
                 }
+                $nodeData = (object) $result->fetchAssociative();
 
                 // Check whether the current user is allowed to access the current page
 //                if (Input::get('act') != 'show' && !$this->User->isAllowed($permission, $nodeData->row()))
@@ -596,10 +586,9 @@ class TreeContainer
         // Prevent adding non-root pages on top-level
         if ('create' != Input::get('mode') && 0 == $row['pid']) {
             $stmt = $this->connection->prepare('SELECT * FROM '.$table.' WHERE id=? LIMIT 1');
-            $stmt->execute([Input::get('id')]);
-            $objPage = $stmt->fetch(FetchMode::STANDARD_OBJECT);
+            $result = $stmt->executeQuery([Input::get('id')]);
 
-            if (!$objPage || !$this->nodeTypeCollection->isRootType($objPage->type)) {
+            if ($result->rowCount() < 1 || !$this->nodeTypeCollection->isRootType($result->fetchAssociative()['type'] ?? '')) {
                 $disablePA = true;
 
                 if (0 == $row['id']) {
@@ -618,14 +607,13 @@ class TreeContainer
                 }
             }
 
-            $stmt = $this->connection->prepare('SELECT * FROM '.$table.' WHERE id=? LIMIT 1');
-            $stmt->execute([$row['pid']]);
-            $objPage = $stmt->fetch(FetchMode::STANDARD_OBJECT);
+            $result = $this->connection->prepare('SELECT id FROM '.$table.' WHERE id=? LIMIT 1')->executeQuery([$row['pid']]);
+            $objPage = $result->fetchAssociative();
 
             // Disable "paste after" button if there is no permission 2 (move) or 1 (create) for the parent page
             if (!$disablePA && $objPage) {
                 //				if (!$user->isAllowed(BackendUser::CAN_EDIT_PAGE_HIERARCHY, $objPage->row()) || (Input::get('mode') == 'create' && !$this->User->isAllowed(BackendUser::CAN_EDIT_PAGE, $objPage->row())))
-                if (!$this->hasAccess($objPage->id, $user)) {
+                if (!$this->hasAccess($objPage['id'], $user)) {
                     $disablePA = true;
                 }
             }
@@ -694,12 +682,11 @@ class TreeContainer
             return '';
         }
 
-        $stmt = $this->connection->prepare('SELECT * FROM tl_tree WHERE pid=? LIMIT 1');
-        $stmt->execute([$row['id']]);
-        $childNodes = $stmt->fetch(FetchMode::STANDARD_OBJECT);
+        $result = $this->connection->prepare('SELECT * FROM tl_tree WHERE pid=? LIMIT 1')->executeStatement([$row['id']]);
 
-        //		return ($childNodes->numRows && $this->User->hasAccess($row['type'], 'alpty') && $this->User->isAllowed(BackendUser::CAN_EDIT_PAGE_HIERARCHY, $row)) ? '<a href="' . $this->addToUrl($href . '&amp;id=' . $row['id']) . '" title="' . StringUtil::specialchars($title) . '"' . $attributes . '>' . Image::getHtml($icon, $label) . '</a> ' : Image::getHtml(preg_replace('/\.svg$/i', '_.svg', $icon)) . ' ';
-        return ($childNodes && $this->hasAccess($row['id'])) ? '<a href="'.Backend::addToUrl($href.'&amp;id='.$row['id']).'" title="'.StringUtil::specialchars($title).'"'.$attributes.'>'.Image::getHtml($icon, $label).'</a> ' : Image::getHtml(preg_replace('/\.svg$/i', '_.svg', $icon)).' ';
+        return ($result > 0 && $this->hasAccess($row['id']))
+            ? '<a href="'.Backend::addToUrl($href.'&amp;id='.$row['id']).'" title="'.StringUtil::specialchars($title).'"'.$attributes.'>'.Image::getHtml($icon, $label).'</a> '
+            : Image::getHtml(preg_replace('/\.svg$/i', '_.svg', $icon)).' ';
     }
 
     /**
@@ -841,12 +828,10 @@ class TreeContainer
 
         // Set the current record
         if ($dc) {
-            $stmt = $this->connection->prepare('SELECT * FROM tl_tree WHERE id=? LIMIT 1');
-            $stmt->execute([$intId]);
-            $objRow = $stmt->fetch(FetchMode::STANDARD_OBJECT);
+            $result = $this->connection->prepare('SELECT * FROM tl_tree WHERE id=? LIMIT 1')->executeQuery([$intId]);
 
-            if ($objRow) {
-                $dc->activeRecord = $objRow;
+            if ($result->rowCount() > 0) {
+                $dc->activeRecord = (object) $result->fetchAssociative();
             }
         }
 
@@ -867,8 +852,9 @@ class TreeContainer
         $time = time();
 
         // Update the database
-        $stmt = $this->connection->prepare("UPDATE tl_tree SET tstamp=$time, published='".($blnVisible ? '1' : '')."' WHERE id=?");
-        $stmt->execute([$intId]);
+        $stmt = $this->connection
+            ->prepare("UPDATE tl_tree SET tstamp=$time, published='".($blnVisible ? '1' : '')."' WHERE id=?")
+            ->executeStatement([$intId]);
 
         if ($dc) {
             $dc->activeRecord->tstamp = $time;

@@ -1,19 +1,24 @@
 <?php
 
 /*
- * Copyright (c) 2020 Heimrich & Hannot GmbH
+ * Copyright (c) 2022 Heimrich & Hannot GmbH
  *
  * @license LGPL-3.0-or-later
  */
 
+use HeimrichHannot\TreeBundle\EventListener\DataContainer\TreeContainer;
+use HeimrichHannot\TreeBundle\OutputType\ListOutputType;
+use HeimrichHannot\TreeBundle\TreeNode\AbstractTreeNode;
+use HeimrichHannot\TreeBundle\TreeNode\SimpleNode;
+
 $GLOBALS['TL_DCA']['tl_tree'] = [
     // Config
     'config' => [
-        'label' => '<b>'.$GLOBALS['TL_LANG']['tl_tree']['TYPES']['mainroot'].'</b> '.Config::get('websiteTitle'),
+        'label' => '<b>'.($GLOBALS['TL_LANG']['tl_tree']['TYPES']['mainroot'] ?? 'Root').'</b> '.\Contao\Config::get('websiteTitle'),
         'dataContainer' => 'Table',
         'enableVersioning' => true,
         'onload_callback' => [
-            [\HeimrichHannot\TreeBundle\EventListener\DataContainer\TreeContainer::class, 'onLoadCallback'],
+            [TreeContainer::class, 'onLoadCallback'],
         ],
         'sql' => [
             'keys' => [
@@ -29,14 +34,14 @@ $GLOBALS['TL_DCA']['tl_tree'] = [
         'sorting' => [
             'mode' => 5,
             'icon' => 'bundles/heimrichhannottree/img/backend/tree.svg',
-            'paste_button_callback' => [\HeimrichHannot\TreeBundle\EventListener\DataContainer\TreeContainer::class, 'onPasteButtonCallback'],
+            'paste_button_callback' => [TreeContainer::class, 'onPasteButtonCallback'],
             'panelLayout' => 'filter;search',
             'child_record_class' => 'tl_tree',
         ],
         'label' => [
             'fields' => ['title'],
             'format' => '%s',
-            'label_callback' => [\HeimrichHannot\TreeBundle\EventListener\DataContainer\TreeContainer::class, 'onLabelCallback'],
+            'label_callback' => [TreeContainer::class, 'onLabelCallback'],
         ],
         'global_operations' => [
             'toggleNodes' => [
@@ -57,41 +62,41 @@ $GLOBALS['TL_DCA']['tl_tree'] = [
                 'label' => &$GLOBALS['TL_LANG']['tl_tree']['edit'],
                 'href' => 'act=edit',
                 'icon' => 'edit.svg',
-                'button_callback' => [\HeimrichHannot\TreeBundle\EventListener\DataContainer\TreeContainer::class, 'onEditButtonCallback'],
+                'button_callback' => [TreeContainer::class, 'onEditButtonCallback'],
             ],
             'copy' => [
                 'label' => &$GLOBALS['TL_LANG']['tl_tree']['copy'],
                 'href' => 'act=paste&amp;mode=copy',
                 'icon' => 'copy.svg',
                 'attributes' => 'onclick="Backend.getScrollOffset()"',
-                'button_callback' => [\HeimrichHannot\TreeBundle\EventListener\DataContainer\TreeContainer::class, 'onCopyButtonCallback'],
+                'button_callback' => [TreeContainer::class, 'onCopyButtonCallback'],
             ],
             'copyChilds' => [
                 'label' => &$GLOBALS['TL_LANG']['tl_tree']['copyChilds'],
                 'href' => 'act=paste&amp;mode=copy&amp;childs=1',
                 'icon' => 'copychilds.svg',
                 'attributes' => 'onclick="Backend.getScrollOffset()"',
-                'button_callback' => [\HeimrichHannot\TreeBundle\EventListener\DataContainer\TreeContainer::class, 'onCopyChildsButtonCallback'],
+                'button_callback' => [TreeContainer::class, 'onCopyChildsButtonCallback'],
             ],
             'cut' => [
                 'label' => &$GLOBALS['TL_LANG']['tl_tree']['cut'],
                 'href' => 'act=paste&amp;mode=cut',
                 'icon' => 'cut.svg',
                 'attributes' => 'onclick="Backend.getScrollOffset()"',
-                'button_callback' => [\HeimrichHannot\TreeBundle\EventListener\DataContainer\TreeContainer::class, 'onCutButtonCallback'],
+                'button_callback' => [TreeContainer::class, 'onCutButtonCallback'],
             ],
             'delete' => [
                 'label' => &$GLOBALS['TL_LANG']['tl_tree']['delete'],
                 'href' => 'act=delete',
                 'icon' => 'delete.svg',
-                'attributes' => 'onclick="if(!confirm(\''.$GLOBALS['TL_LANG']['MSC']['deleteConfirm'].'\'))return false;Backend.getScrollOffset()"',
-                'button_callback' => [\HeimrichHannot\TreeBundle\EventListener\DataContainer\TreeContainer::class, 'onDeleteButtonCallback'],
+                'attributes' => 'onclick="if(!confirm(\''.($GLOBALS['TL_LANG']['MSC']['deleteConfirm'] ?? '').'\'))return false;Backend.getScrollOffset()"',
+                'button_callback' => [TreeContainer::class, 'onDeleteButtonCallback'],
             ],
             'toggle' => [
                 'label' => &$GLOBALS['TL_LANG']['tl_tree']['toggle'],
                 'icon' => 'visible.svg',
                 'attributes' => 'onclick="Backend.getScrollOffset();return AjaxRequest.toggleVisibility(this,%s)"',
-                'button_callback' => [\HeimrichHannot\TreeBundle\EventListener\DataContainer\TreeContainer::class, 'onToggleButtonCallback'],
+                'button_callback' => [TreeContainer::class, 'onToggleButtonCallback'],
             ],
             'show' => [
                 'label' => &$GLOBALS['TL_LANG']['tl_tree']['show'],
@@ -104,9 +109,9 @@ $GLOBALS['TL_DCA']['tl_tree'] = [
     // Palettes
     'palettes' => [
         '__selector__' => ['type'],
-        'default' => \HeimrichHannot\TreeBundle\TreeNode\AbstractTreeNode::PREPEND_PALETTE
+        'default' => AbstractTreeNode::PREPEND_PALETTE
             .'{content_legend},description;'
-            .\HeimrichHannot\TreeBundle\TreeNode\AbstractTreeNode::APPEND_PALETTE,
+            .AbstractTreeNode::APPEND_PALETTE,
     ],
 
     // Subpalettes
@@ -152,30 +157,30 @@ $GLOBALS['TL_DCA']['tl_tree'] = [
             'inputType' => 'text',
             'eval' => ['rgxp' => 'folderalias', 'doNotCopy' => true, 'maxlength' => 128, 'tl_class' => 'w50 clr'],
             'save_callback' => [
-                [\HeimrichHannot\TreeBundle\EventListener\DataContainer\TreeContainer::class, 'generateAlias'],
+                [TreeContainer::class, 'generateAlias'],
             ],
             'sql' => "varchar(255) COLLATE utf8_bin NOT NULL default ''",
         ],
         'type' => [
             'label' => &$GLOBALS['TL_LANG']['tl_tree']['type'],
-            'default' => \HeimrichHannot\TreeBundle\TreeNode\SimpleNode::getType(),
+            'default' => SimpleNode::getType(),
             'exclude' => true,
             'filter' => true,
             'inputType' => 'select',
-            'options_callback' => [\HeimrichHannot\TreeBundle\EventListener\DataContainer\TreeContainer::class, 'onTypeOptionsCallback'],
+            'options_callback' => [TreeContainer::class, 'onTypeOptionsCallback'],
             'eval' => ['helpwizard' => true, 'submitOnChange' => true, 'tl_class' => 'w50'],
             'reference' => &$GLOBALS['TL_LANG']['tl_tree']['TYPES'],
             'save_callback' => [
-                [\HeimrichHannot\TreeBundle\EventListener\DataContainer\TreeContainer::class, 'onTypeSaveCallback'],
+                [TreeContainer::class, 'onTypeSaveCallback'],
             ],
             'sql' => "varchar(32) NOT NULL default ''",
         ],
         'outputType' => [
             'label' => &$GLOBALS['TL_LANG']['tl_tree']['outputType'],
-            'default' => \HeimrichHannot\TreeBundle\OutputType\ListOutputType::getType(),
+            'default' => ListOutputType::getType(),
             'exclude' => true,
             'inputType' => 'select',
-            'options_callback' => [\HeimrichHannot\TreeBundle\EventListener\DataContainer\TreeContainer::class, 'onOutputTypeOptionsCallback'],
+            'options_callback' => [TreeContainer::class, 'onOutputTypeOptionsCallback'],
             'eval' => ['submitOnChange' => true, 'tl_class' => 'w50'],
             'reference' => &$GLOBALS['TL_LANG']['tl_tree']['OUTPUTTYPES'],
             'sql' => "varchar(32) NOT NULL default ''",

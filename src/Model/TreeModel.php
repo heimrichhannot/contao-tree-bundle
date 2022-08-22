@@ -1,13 +1,14 @@
 <?php
 
 /*
- * Copyright (c) 2020 Heimrich & Hannot GmbH
+ * Copyright (c) 2022 Heimrich & Hannot GmbH
  *
  * @license LGPL-3.0-or-later
  */
 
 namespace HeimrichHannot\TreeBundle\Model;
 
+use Contao\Date;
 use Contao\Model;
 use Contao\Model\Collection;
 
@@ -88,7 +89,7 @@ class TreeModel extends Model
         $columns = ['pid=0'];
 
         if (!static::isPreviewMode($options)) {
-            $time = \Date::floorToMinute();
+            $time = Date::floorToMinute();
             $columns[] = "($t.start='' OR $t.start<='$time') AND ($t.stop='' OR $t.stop>'".($time + 60)."') AND $t.published='1'";
         }
 

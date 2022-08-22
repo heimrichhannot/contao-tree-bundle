@@ -8,6 +8,7 @@
 
 namespace HeimrichHannot\TreeBundle\Generator;
 
+use Contao\Date;
 use Doctrine\DBAL\Connection;
 use HeimrichHannot\TreeBundle\Collection\NodeTypeCollection;
 use HeimrichHannot\TreeBundle\Collection\OutputTypeCollection;
@@ -17,7 +18,6 @@ use HeimrichHannot\TreeBundle\OutputType\AbstractOutputType;
 use HeimrichHannot\TreeBundle\OutputType\ListOutputType;
 use HeimrichHannot\TreeBundle\TreeNode\AbstractTreeNode;
 use HeimrichHannot\TwigSupportBundle\Filesystem\TwigTemplateLocator;
-use HeimrichHannot\UtilsBundle\Template\TemplateUtil;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpKernel\KernelInterface;
 use Twig\Environment;
@@ -50,10 +50,6 @@ class TreeGenerator
      */
     private $eventDispatcher;
     /**
-     * @var TemplateUtil
-     */
-    private $templateUtil;
-    /**
      * @var OutputTypeCollection
      */
     private $outputTypeCollection;
@@ -62,14 +58,13 @@ class TreeGenerator
      */
     private $twigTemplateLocator;
 
-    public function __construct(KernelInterface $kernel, Connection $connection, Environment $twig, NodeTypeCollection $nodeTypeCollection, EventDispatcherInterface $eventDispatcher, TemplateUtil $templateUtil, OutputTypeCollection $outputTypeCollection, TwigTemplateLocator $twigTemplateLocator)
+    public function __construct(KernelInterface $kernel, Connection $connection, Environment $twig, NodeTypeCollection $nodeTypeCollection, EventDispatcherInterface $eventDispatcher, OutputTypeCollection $outputTypeCollection, TwigTemplateLocator $twigTemplateLocator)
     {
         $this->kernel = $kernel;
         $this->connection = $connection;
         $this->twig = $twig;
         $this->nodeTypeCollection = $nodeTypeCollection;
         $this->eventDispatcher = $eventDispatcher;
-        $this->templateUtil = $templateUtil;
         $this->outputTypeCollection = $outputTypeCollection;
         $this->twigTemplateLocator = $twigTemplateLocator;
     }
@@ -101,14 +96,22 @@ class TreeGenerator
     /**
      * Render a single node with it's childs.
      *
-     * @throws \Doctrine\DBAL\DBALException
      * @throws \Twig\Error\LoaderError
      * @throws \Twig\Error\RuntimeError
      * @throws \Twig\Error\SyntaxError
      */
     protected function renderNode(TreeModel $currentNode, AbstractOutputType $outputType, int $depth = 0): string
     {
+        /** @var AbstractTreeNode|null $nodeType */
         $nodeType = $this->nodeTypeCollection->getNodeType($currentNode->type);
+
+        if (null === $nodeType) {
+            trigger_error('Tree node type '.$currentNode->type.' does not exist.', \E_USER_WARNING);
+
+            if ($this->kernel->isDebug()) {
+                return '<!-- Tree node type '.$currentNode->type.' does not exist. -->';
+            }
+        }
 
         $context = $currentNode->row();
         $context['childs'] = [];
@@ -120,7 +123,7 @@ class TreeGenerator
         }
         $context['cssId'] = 'node_'.$currentNode->alias;
 
-        $time = \Date::floorToMinute();
+        $time = Date::floorToMinute();
         $stmt = $this->connection->prepare(
             "SELECT id FROM tl_tree WHERE pid=? AND (start='' OR start<=?) AND (stop='' OR stop>?) AND published='1' ORDER BY sorting ASC"
         );
